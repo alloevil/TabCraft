@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { GroupCard } from './components/GroupCard';
+import { TreeView } from './components/TreeView';
+import { QuickActions } from './components/QuickActions';
 import { SettingsView } from './components/SettingsView';
 import { RulesView } from './components/RulesView';
 import { WorkspacesView } from './components/WorkspacesView';
 import { DashboardView } from './components/DashboardView';
 
 type Tab = chrome.tabs.Tab;
-type View = 'tabs' | 'rules' | 'settings' | 'workspaces' | 'dashboard';
+type View = 'tabs' | 'tree' | 'quick' | 'rules' | 'settings' | 'workspaces' | 'dashboard';
 
 export default function App() {
   const [tabs, setTabs] = useState<Tab[]>([]);
@@ -110,10 +112,12 @@ export default function App() {
 
   const navItems: Array<{ id: View; icon: string; label: string }> = [
     { id: 'tabs', icon: '📑', label: 'Tabs' },
+    { id: 'tree', icon: '🌳', label: 'Tree' },
+    { id: 'quick', icon: '⚡', label: 'Quick' },
     { id: 'rules', icon: '📋', label: 'Rules' },
     { id: 'settings', icon: '⚙️', label: 'Settings' },
     { id: 'workspaces', icon: '💼', label: 'Workspaces' },
-    { id: 'dashboard', icon: '📊', label: 'Dashboard' },
+    { id: 'dashboard', icon: '📊', label: 'Stats' },
   ];
 
   return (
@@ -192,6 +196,8 @@ export default function App() {
             )}
           </div>
         )}
+        {view === 'tree' && <TreeView onRefresh={loadTabs} />}
+        {view === 'quick' && <QuickActions onRefresh={loadTabs} />}
         {view === 'rules' && <RulesView />}
         {view === 'settings' && <SettingsView />}
         {view === 'workspaces' && <WorkspacesView />}
