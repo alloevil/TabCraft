@@ -57,29 +57,30 @@ Most tab managers just group by domain. TabCraft understands what each tab is ac
 - Node.js 18+
 - Chrome 120+ (AI features require Chrome 127+)
 
-### Install & Build
+### Quick Start
 
 ```bash
-# Clone
-git clone https://github.com/alloevil/tabcraft.git
-cd tabcraft
-
-# Install dependencies
-npm install
-
-# Development mode (with hot reload)
-npm run dev
-
-# Production build
-npm run build
+git clone https://github.com/alloevil/TabCraft.git
+cd TabCraft
+bash setup.sh
 ```
 
-### Load in Chrome
+The script installs dependencies, builds the extension, and starts the dev server with hot reload.
+
+Then load it in Chrome:
 
 1. Open `chrome://extensions/`
-2. Enable "Developer mode"
-3. Click "Load unpacked"
-4. Select the `build/chrome-mv3-dev` folder (dev) or `build/chrome-mv3-prod` folder (prod)
+2. Enable **Developer mode**
+3. Click **Load unpacked**
+4. Select the `build/chrome-mv3-dev/` folder
+
+### Manual Setup
+
+```bash
+npm install
+npm run dev    # Dev mode (hot reload)
+npm run build  # Production build
+```
 
 ---
 
