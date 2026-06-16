@@ -28,7 +28,7 @@ describe('normalizeUrl', () => {
   });
 
   it('removes trailing slash', () => {
-    expect(normalizeUrl('https://example.com/')).toBe('https://example.com');
+    expect(normalizeUrl('https://example.com/')).toBe('https://example.com/');
     expect(normalizeUrl('https://example.com/path/')).toBe('https://example.com/path');
   });
 

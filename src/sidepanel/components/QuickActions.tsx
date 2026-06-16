@@ -150,7 +150,8 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
     if (activeIdx === -1) return;
 
     for (let i = activeIdx + 1; i < tabs.length; i++) {
-      if (tabs[i].id) await chrome.tabs.remove(tabs[i].id);
+      const tabId = tabs[i].id;
+      if (tabId != null) await chrome.tabs.remove(tabId);
     }
 
     await updateStats();

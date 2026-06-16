@@ -5,17 +5,44 @@
 import type { ClassificationResult, CategoryName } from '../../shared/types';
 import { CATEGORIES } from '../../shared/types';
 
+/** Experimental AI API types (not yet in TypeScript definitions) */
+interface LanguageModelCapabilities {
+  available: 'readily' | 'after-download' | 'no';
+}
+interface LanguageModel {
+  capabilities(): Promise<LanguageModelCapabilities>;
+  create(): Promise<LanguageModelSession>;
+  prompt(text: string): Promise<string>;
+  destroy(): void;
+}
+interface LanguageModelSession {
+  prompt(text: string): Promise<string>;
+  destroy(): void;
+}
+interface WindowAI {
+  languageModel?: LanguageModel;
+}
+
+/** Safely access the experimental window.ai API */
+function getAI(): WindowAI | null {
+  try {
+    if (typeof window !== 'undefined' && 'ai' in window) {
+      return (window as unknown as { ai: WindowAI }).ai;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /** Check if Chrome built-in AI is available */
 export async function isGeminiNanoAvailable(): Promise<boolean> {
   try {
     // New API: window.ai.languageModel (Chrome 131+)
-    if (typeof window !== 'undefined' && 'ai' in window) {
-      // @ts-expect-error — experimental API
-      const ai = window.ai;
-      if (ai?.languageModel) {
-        const capabilities = await ai.languageModel.capabilities();
-        return capabilities?.available === 'readily' || capabilities?.available === 'after-download';
-      }
+    const ai = getAI();
+    if (ai?.languageModel) {
+      const capabilities = await ai.languageModel.capabilities();
+      return capabilities.available === 'readily' || capabilities.available === 'after-download';
     }
     // Legacy API fallback (deprecated)
     // @ts-expect-error — experimental API
@@ -30,25 +57,18 @@ export async function isGeminiNanoAvailable(): Promise<boolean> {
 }
 
 /** Create a Gemini Nano session */
-async function createSession(): Promise<any> {
-  try {
-    // New API: window.ai.languageModel.create()
-    if (typeof window !== 'undefined' && 'ai' in window) {
-      // @ts-expect-error — experimental API
-      const ai = window.ai;
-      if (ai?.languageModel?.create) {
-        return await ai.languageModel.create();
-      }
-    }
-    // Legacy API fallback
-    // @ts-expect-error — experimental API
-    if (chrome.ai?.createTextSession) {
-      return await chrome.ai.createTextSession();
-    }
-    throw new Error('No AI API available');
-  } catch (err) {
-    throw new Error(`Failed to create AI session: ${err}`);
+async function createSession(): Promise<LanguageModelSession> {
+  // New API: window.ai.languageModel.create()
+  const ai = getAI();
+  if (ai?.languageModel?.create) {
+    return await ai.languageModel.create();
   }
+  // Legacy API fallback
+  // @ts-expect-error — experimental API
+  if (typeof chrome !== 'undefined' && chrome.ai?.createTextSession) {
+    return await chrome.ai.createTextSession();
+  }
+  throw new Error('No AI API available');
 }
 
 /** Build classification prompt */
@@ -87,7 +107,7 @@ function parseCategory(response: string): CategoryName | null {
  * Uses Chrome's built-in AI for on-device tab classification
  */
 export class GeminiNanoClassifier {
-  private session: any = null;
+  private session: LanguageModelSession | null = null;
   private available: boolean = false;
   private initPromise: Promise<void> | null = null;
 
@@ -121,7 +141,7 @@ export class GeminiNanoClassifier {
 
   /** Classify a tab using Gemini Nano */
   async classify(url: string, title: string): Promise<ClassificationResult> {
-    if (!this.isReady()) {
+    if (!this.isReady() || !this.session) {
       return {
         category: 'Other',
         confidence: 0,
