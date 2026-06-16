@@ -14,7 +14,7 @@ export function normalizeUrl(url: string): string {
     }
 
     // Remove trailing slash from pathname
-    let pathname = u.pathname.replace(/\/$/, '') || '/';
+    const pathname = u.pathname.replace(/\/$/, '') || '/';
 
     // Remove fragment
     let normalized = u.origin + pathname + u.search;

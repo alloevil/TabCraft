@@ -45,7 +45,6 @@ export async function isGeminiNanoAvailable(): Promise<boolean> {
       return capabilities.available === 'readily' || capabilities.available === 'after-download';
     }
     // Legacy API fallback (deprecated)
-    // @ts-expect-error — experimental API
     if (typeof chrome !== 'undefined' && chrome.ai?.canCreateTextSession) {
       const status = await chrome.ai.canCreateTextSession();
       return status === 'readily' || status === 'after-download';
@@ -64,7 +63,6 @@ async function createSession(): Promise<LanguageModelSession> {
     return await ai.languageModel.create();
   }
   // Legacy API fallback
-  // @ts-expect-error — experimental API
   if (typeof chrome !== 'undefined' && chrome.ai?.createTextSession) {
     return await chrome.ai.createTextSession();
   }
