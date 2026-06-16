@@ -1,0 +1,77 @@
+{
+  "name": "tabcraft",
+  "displayName": "TabCraft - AI Tab Manager",
+  "version": "0.1.0",
+  "description": "AI-powered tab organizer for Chrome — auto-groups by topic, hibernates inactive tabs, removes duplicates. 100% private, on-device AI.",
+  "author": {
+    "name": "TabCraft Contributors",
+    "url": "https://github.com/alloevil/tabcraft"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/alloevil/tabcraft",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alloevil/tabcraft.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alloevil/tabcraft/issues"
+  },
+  "keywords": [
+    "chrome-extension",
+    "tab-manager",
+    "tab-groups",
+    "ai",
+    "gemini-nano",
+    "productivity",
+    "tab-hibernation",
+    "duplicate-tabs",
+    "browser-extension",
+    "open-source"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package",
+    "lint": "eslint src/ --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "plasmo": "^0.89.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.280",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "manifest": {
+    "permissions": [
+      "tabs",
+      "tabGroups",
+      "storage",
+      "sidePanel",
+      "contextMenus",
+      "alarms"
+    ],
+    "host_permissions": [
+      "<all_urls>"
+    ],
+    "side_panel": {
+      "default_path": "sidepanel/index.html"
+    },
+    "icons": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  }
+}
