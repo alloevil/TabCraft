@@ -10,7 +10,7 @@ describe('normalizeUrl', () => {
       const params = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
         'fbclid', 'gclid', 'msclkid', 'ref', '_ga', '_gl'];
       for (const p of params) u.searchParams.delete(p);
-      let pathname = u.pathname.replace(/\/$/, '') || '/';
+      const pathname = u.pathname.replace(/\/$/, '') || '/';
       let normalized = u.origin + pathname + u.search;
       if (u.hostname.includes('google.') && u.searchParams.has('q')) {
         const q = u.searchParams.get('q');

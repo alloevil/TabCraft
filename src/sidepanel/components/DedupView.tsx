@@ -280,7 +280,7 @@ function normalizeUrl(url: string): string {
     // Remove hash
     u.hash = '';
     // Remove trailing slash
-    let path = u.pathname.replace(/\/$/, '') || '/';
+    const path = u.pathname.replace(/\/$/, '') || '/';
     return u.origin + path + u.search;
   } catch {
     return url;
