@@ -8,9 +8,10 @@ import { SettingsView } from './components/SettingsView';
 import { RulesView } from './components/RulesView';
 import { WorkspacesView } from './components/WorkspacesView';
 import { DashboardView } from './components/DashboardView';
+import { DedupView } from './components/DedupView';
 
 type Tab = chrome.tabs.Tab;
-type View = 'tabs' | 'tree' | 'quick' | 'rules' | 'settings' | 'workspaces' | 'dashboard';
+type View = 'tabs' | 'tree' | 'quick' | 'rules' | 'settings' | 'workspaces' | 'dashboard' | 'dedup';
 
 export default function App() {
   const [tabs, setTabs] = useState<Tab[]>([]);
@@ -114,6 +115,7 @@ export default function App() {
     { id: 'tabs', icon: '📑', label: 'Tabs' },
     { id: 'tree', icon: '🌳', label: 'Tree' },
     { id: 'quick', icon: '⚡', label: 'Quick' },
+    { id: 'dedup', icon: '🔗', label: 'Dedup' },
     { id: 'rules', icon: '📋', label: 'Rules' },
     { id: 'settings', icon: '⚙️', label: 'Settings' },
     { id: 'workspaces', icon: '💼', label: 'Workspaces' },
@@ -202,6 +204,7 @@ export default function App() {
         {view === 'settings' && <SettingsView />}
         {view === 'workspaces' && <WorkspacesView />}
         {view === 'dashboard' && <DashboardView />}
+        {view === 'dedup' && <DedupView onRefresh={loadTabs} />}
       </main>
     </div>
   );

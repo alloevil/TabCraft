@@ -395,6 +395,63 @@
 .confirm-dialog p { font-size: 14px; margin-bottom: 16px; line-height: 1.5; }
 .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
+/* ── Dedup View ───────────────────────────────────────────── */
+.dedup-view { display: flex; flex-direction: column; gap: 16px; }
+.dedup-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.dedup-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px;
+  background: var(--bg-card); backdrop-filter: blur(12px); border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+}
+.dedup-stat-value {
+  font-size: 20px; font-weight: 700; background: linear-gradient(135deg, var(--accent), #a855f7);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.dedup-stat-value.warning { background: linear-gradient(135deg, var(--warning), #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.dedup-stat-value.danger { background: linear-gradient(135deg, var(--danger), #f87171); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.dedup-stat-label { font-size: 11px; color: var(--text-secondary); }
+.dedup-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.dedup-cross-window-badge {
+  padding: 8px 12px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3);
+  border-radius: var(--radius-sm); font-size: 12px; color: var(--warning);
+}
+.dedup-list { display: flex; flex-direction: column; gap: 12px; }
+.dedup-group {
+  background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius);
+  overflow: hidden;
+}
+.dedup-group.cross-window { border-left: 3px solid var(--warning); }
+.dedup-group-header { padding: 10px 12px; background: var(--bg-secondary); }
+.dedup-group-info { display: flex; align-items: center; gap: 8px; }
+.dedup-group-url {
+  font-family: monospace; font-size: 13px; font-weight: 600; flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dedup-badge {
+  padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600;
+}
+.dedup-badge.cross { background: rgba(245,158,11,0.15); color: var(--warning); }
+.dedup-badge.count { background: var(--bg-hover); color: var(--text-secondary); }
+.dedup-group-tabs { display: flex; flex-direction: column; }
+.dedup-tab {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  cursor: pointer; transition: all 0.15s; border-bottom: 1px solid var(--border-light);
+}
+.dedup-tab:last-child { border-bottom: none; }
+.dedup-tab:hover { background: var(--bg-hover); }
+.dedup-tab.keep { background: rgba(34,197,94,0.08); }
+.dedup-tab.remove { opacity: 0.6; }
+.dedup-tab-radio { font-size: 14px; color: var(--accent); width: 16px; text-align: center; }
+.dedup-tab.keep .dedup-tab-radio { color: var(--success); }
+.dedup-tab-favicon { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+.dedup-tab-title {
+  flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dedup-tab-window {
+  font-size: 10px; color: var(--text-muted); background: var(--bg-secondary);
+  padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+}
+
 /* ── Scrollbar ─────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
