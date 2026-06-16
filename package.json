@@ -2,11 +2,8 @@
   "name": "tabcraft",
   "displayName": "TabCraft - AI Tab Manager",
   "version": "0.1.0",
-  "description": "AI-powered tab organizer for Chrome — auto-groups by topic, hibernates inactive tabs, removes duplicates. 100% private, on-device AI.",
-  "author": {
-    "name": "TabCraft Contributors",
-    "url": "https://github.com/alloevil/tabcraft"
-  },
+  "description": "AI-powered tab organizer for Chrome \u2014 auto-groups by topic, hibernates inactive tabs, removes duplicates. 100% private, on-device AI.",
+  "author": "TabCraft Contributors",
   "license": "MIT",
   "homepage": "https://github.com/alloevil/tabcraft",
   "repository": {
@@ -68,14 +65,6 @@
     "host_permissions": [
       "<all_urls>"
     ],
-    "side_panel": {
-      "default_path": "sidepanel/index.html"
-    },
-    "icons": {
-      "16": "icons/icon-16.png",
-      "48": "icons/icon-48.png",
-      "128": "icons/icon-128.png"
-    },
     "commands": {
       "smart-group": {
         "suggested_key": {
