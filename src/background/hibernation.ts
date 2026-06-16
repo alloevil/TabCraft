@@ -1,67 +1,70 @@
 // TabCraft — Tab Hibernation
 // Automatically suspends inactive tabs to save memory
+// Uses chrome.alarms for MV3 reliability + chrome.storage for state persistence
 
 import { Storage } from './storage';
 
+const LAST_ACCESS_KEY = 'hibernation_lastAccess';
+
 /** Check if a tab should be excluded from hibernation */
 function shouldExclude(tab: chrome.tabs.Tab): boolean {
-  // Never hibernate: pinned tabs, active tab, audio-playing tabs, chrome:// pages
   if (tab.pinned) return true;
   if (tab.active) return true;
   if (tab.audible) return true;
   if (tab.url?.startsWith('chrome://')) return true;
-  // Never hibernate tabs with form data (pending URL changes)
   if (tab.status === 'loading') return true;
   return false;
 }
 
 /**
  * Hibernation Manager
- * Discards inactive tabs to free memory
+ * Uses chrome.alarms for periodic checks (MV3-safe)
+ * Uses chrome.storage.local for lastAccessMap persistence
  */
 export class HibernationManager {
-  private checkInterval: ReturnType<typeof setInterval> | null = null;
-  private lastAccessMap: Map<number, number> = new Map();
-
   /** Start monitoring tab activity */
   start(): void {
-    // Track tab activation
-    chrome.tabs.onActivated.addListener((activeInfo) => {
-      this.lastAccessMap.set(activeInfo.tabId, Date.now());
+    // Track tab activation — persist to storage
+    chrome.tabs.onActivated.addListener(async (activeInfo) => {
+      await this.updateLastAccess(activeInfo.tabId);
     });
 
     // Track tab updates
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
       if (changeInfo.status === 'complete') {
-        this.lastAccessMap.set(tabId, Date.now());
+        await this.updateLastAccess(tabId);
       }
     });
 
     // Remove closed tabs from tracking
-    chrome.tabs.onRemoved.addListener((tabId) => {
-      this.lastAccessMap.delete(tabId);
+    chrome.tabs.onRemoved.addListener(async (tabId) => {
+      await this.removeLastAccess(tabId);
     });
 
-    // Start periodic check
-    this.startPeriodicCheck();
+    // Periodic check is handled by chrome.alarms in index.ts
   }
 
-  /** Stop monitoring */
-  stop(): void {
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval);
-      this.checkInterval = null;
-    }
+  /** Update last access time for a tab */
+  private async updateLastAccess(tabId: number): Promise<void> {
+    const data = await this.getLastAccessMap();
+    data[tabId] = Date.now();
+    await chrome.storage.local.set({ [LAST_ACCESS_KEY]: data });
   }
 
-  /** Start the periodic hibernation check */
-  private async startPeriodicCheck(): Promise<void> {
-    const settings = await Storage.getSettings();
-    const intervalMs = Math.min(settings.hibernationTimeout * 60 * 1000, 5 * 60 * 1000);
+  /** Remove a tab from last access tracking */
+  private async removeLastAccess(tabId: number): Promise<void> {
+    const data = await this.getLastAccessMap();
+    delete data[tabId];
+    await chrome.storage.local.set({ [LAST_ACCESS_KEY]: data });
+  }
 
-    this.checkInterval = setInterval(() => {
-      this.checkAndHibernate();
-    }, intervalMs);
+  /** Get the last access map from storage */
+  private async getLastAccessMap(): Promise<Record<number, number>> {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(LAST_ACCESS_KEY, (result) => {
+        resolve(result[LAST_ACCESS_KEY] || {});
+      });
+    });
   }
 
   /** Check all tabs and hibernate inactive ones */
@@ -69,6 +72,7 @@ export class HibernationManager {
     const settings = await Storage.getSettings();
     const timeoutMs = settings.hibernationTimeout * 60 * 1000;
     const now = Date.now();
+    const lastAccessMap = await this.getLastAccessMap();
 
     const tabs = await chrome.tabs.query({ currentWindow: true });
     let hibernated = 0;
@@ -76,7 +80,7 @@ export class HibernationManager {
     for (const tab of tabs) {
       if (!tab.id || shouldExclude(tab)) continue;
 
-      const lastAccess = this.lastAccessMap.get(tab.id) || tab.lastAccessed || 0;
+      const lastAccess = lastAccessMap[tab.id] || tab.lastAccessed || 0;
       const inactiveTime = now - lastAccess;
 
       if (inactiveTime > timeoutMs && !tab.discarded) {
@@ -84,7 +88,6 @@ export class HibernationManager {
           await chrome.tabs.discard(tab.id);
           hibernated++;
         } catch (err) {
-          // Tab might not be discardable (e.g., DevTools)
           console.debug(`[TabCraft] Cannot discard tab ${tab.id}:`, err);
         }
       }
@@ -120,11 +123,12 @@ export class HibernationManager {
     const hibernated = tabs.filter(t => t.discarded).length;
     const total = tabs.length;
 
-    // Rough estimate: ~50MB per active tab, ~0.5MB per hibernated tab
-    const savedMB = hibernated * 49.5;
-    const memorySaved = savedMB > 1024
-      ? `${(savedMB / 1024).toFixed(1)} GB`
-      : `${savedMB.toFixed(0)} MB`;
+    // Note: actual memory savings vary by tab content
+    // This is a rough estimate for display purposes only
+    const estimatedSavedMB = hibernated * 50; // ~50MB per tab is a common estimate
+    const memorySaved = estimatedSavedMB > 1024
+      ? `~${(estimatedSavedMB / 1024).toFixed(1)} GB`
+      : `~${estimatedSavedMB} MB`;
 
     return { hibernated, total, memorySaved };
   }

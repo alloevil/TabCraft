@@ -120,27 +120,27 @@ export const Storage = {
   // ── Learned Mappings ──────────────────────────────────────
 
   async getLearnedMappings(): Promise<Record<string, string>> {
-    return (await get('learned')) ?? {};
+    return (await get('learnedMappings')) ?? {};
   },
 
   async setLearnedMapping(domain: string, category: string): Promise<void> {
     const mappings = await this.getLearnedMappings();
     mappings[domain] = category;
-    await set('learned', mappings);
+    await set('learnedMappings', mappings);
   },
 
   // ── Session Snapshot ──────────────────────────────────────
 
   async getSessionSnapshot(): Promise<Workspace | null> {
-    return (await get('session')) ?? null;
+    return (await get('sessionSnapshot')) ?? null;
   },
 
   async setSessionSnapshot(workspace: Workspace): Promise<void> {
-    await set('session', workspace);
+    await set('sessionSnapshot', workspace);
   },
 
   async clearSessionSnapshot(): Promise<void> {
-    await remove('session');
+    await remove('sessionSnapshot');
   },
 
   // ── Stats ─────────────────────────────────────────────────

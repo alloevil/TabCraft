@@ -47,11 +47,12 @@ function setupListeners() {
     if (changeInfo.url) {
       const settings = await Storage.getSettings();
       if (settings.autoCloseDuplicates) {
-        const tabs = await chrome.tabs.query({ currentWindow: true });
         const duplicates = await tabManager.findDuplicates();
         for (const dup of duplicates) {
-          // Close all but the most recently active
-          const toClose = dup.tabs.slice(1);
+          // Sort by lastAccessed descending — most recent first
+          const sorted = dup.tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+          // Keep the most recently active tab, close the rest
+          const toClose = sorted.slice(1);
           for (const tab of toClose) {
             if (tab.id === tabId) {
               // Don't close the tab that was just updated
@@ -118,10 +119,17 @@ function setupListeners() {
     }
   });
 
-  // Session auto-save
-  setInterval(async () => {
-    await saveSession();
-  }, 5 * 60 * 1000); // Every 5 minutes
+  // Session auto-save — use chrome.alarms for MV3 reliability
+  chrome.alarms.create('session-save', { periodInMinutes: 5 });
+  chrome.alarms.create('hibernation-check', { periodInMinutes: 5 });
+
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name === 'session-save') {
+      await saveSession();
+    } else if (alarm.name === 'hibernation-check') {
+      await hibernationManager.checkAndHibernate();
+    }
+  });
 
   // Save session on tab changes
   chrome.tabs.onCreated.addListener(() => saveSession());

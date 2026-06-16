@@ -72,6 +72,22 @@
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"
+    },
+    "commands": {
+      "smart-group": {
+        "suggested_key": {
+          "default": "Ctrl+Shift+G",
+          "mac": "Command+Shift+G"
+        },
+        "description": "Smart group all tabs"
+      },
+      "close-duplicates": {
+        "suggested_key": {
+          "default": "Ctrl+Shift+D",
+          "mac": "Command+Shift+D"
+        },
+        "description": "Close duplicate tabs"
+      }
     }
   }
 }

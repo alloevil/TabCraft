@@ -32,9 +32,7 @@ Most tab managers just group by domain. TabCraft understands what each tab is ac
 ### Coming Soon
 
 - Tab Snooze (close now, reopen later)
-- Workspaces (save/restore tab sessions)
 - Auto-learning from your grouping habits
-- Crash recovery
 - Multi-AI backend (Gemini Nano + Ollama + OpenAI)
 - Firefox support
 

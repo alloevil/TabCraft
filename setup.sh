@@ -31,12 +31,21 @@ echo "🔨 Building extension..."
 npm run dev &
 DEV_PID=$!
 
-# Wait for build to complete
-echo "   Waiting for initial build..."
-sleep 10
+# Wait for build directory to appear (max 120 seconds)
+echo "   Waiting for initial build (this may take a minute)..."
+BUILD_DIR="build/chrome-mv3-dev"
+MAX_WAIT=120
+WAITED=0
 
-# Check if build directory exists
-if [ -d "build/chrome-mv3-dev" ]; then
+while [ ! -d "$BUILD_DIR" ] && [ $WAITED -lt $MAX_WAIT ]; do
+    sleep 5
+    WAITED=$((WAITED + 5))
+    if [ $((WAITED % 15)) -eq 0 ]; then
+        echo "   Still building... (${WAITED}s)"
+    fi
+done
+
+if [ -d "$BUILD_DIR" ]; then
     echo ""
     echo "✅ Build complete!"
     echo ""
@@ -44,7 +53,7 @@ if [ -d "build/chrome-mv3-dev" ]; then
     echo "   1. Open Chrome → chrome://extensions/"
     echo "   2. Enable 'Developer mode' (top right)"
     echo "   3. Click 'Load unpacked'"
-    echo "   4. Select: $(pwd)/build/chrome-mv3-dev/"
+    echo "   4. Select: $(pwd)/$BUILD_DIR"
     echo ""
     echo "💡 The dev server is running (hot reload enabled)."
     echo "   Press Ctrl+C to stop."
@@ -53,7 +62,8 @@ if [ -d "build/chrome-mv3-dev" ]; then
     wait $DEV_PID
 else
     echo ""
-    echo "⚠️  Build directory not found. Check the output above for errors."
+    echo "⚠️  Build timed out after ${MAX_WAIT}s. Check the output above for errors."
+    echo "   You can also try manually: npm run dev"
     kill $DEV_PID 2>/dev/null
     exit 1
 fi

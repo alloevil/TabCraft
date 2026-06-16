@@ -41,7 +41,7 @@ declare namespace chrome {
       active: boolean;
       lastAccessed?: number;
       discarded: boolean;
-      status: 'loading' | 'complete';
+      status: string;
       audible?: boolean;
     }
 

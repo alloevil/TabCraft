@@ -3,28 +3,10 @@
 
 import type { TabInfo, TabGroup, ClassificationResult } from '../shared/types';
 import { GROUP_COLORS } from '../shared/types';
-import { TRACKING_PARAMS } from '../shared/constants';
 import { RuleEngine, extractDomain, getFriendlyName } from './ai/rule-engine';
 import { GeminiNanoClassifier } from './ai/gemini-nano';
 import { Storage } from './storage';
-
-/** Normalize a URL for duplicate comparison */
-function normalizeUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    // Remove tracking params
-    for (const param of TRACKING_PARAMS) {
-      u.searchParams.delete(param);
-    }
-    // Remove trailing slash
-    let normalized = u.origin + u.pathname.replace(/\/$/, '') + u.search;
-    // Remove fragment
-    normalized = normalized.split('#')[0];
-    return normalized;
-  } catch {
-    return url;
-  }
-}
+import { normalizeUrl } from './duplicate';
 
 /** Get all tabs in the current window */
 async function getAllTabs(): Promise<chrome.tabs.Tab[]> {

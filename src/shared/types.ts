@@ -13,7 +13,7 @@ export interface TabInfo {
   lastAccessed: number;       // timestamp
   createdAt: number;          // timestamp
   discarded: boolean;         // hibernated?
-  status: chrome.tabs.TabStatus;
+  status: string;
 }
 
 /** A group of tabs */

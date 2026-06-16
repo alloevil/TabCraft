@@ -1,5 +1,6 @@
 // TabCraft — Gemini Nano AI Classification Engine
 // Uses Chrome's built-in AI (Gemini Nano) for on-device tab classification
+// API: window.ai.languageModel (Chrome 131+)
 
 import type { ClassificationResult, CategoryName } from '../../shared/types';
 import { CATEGORIES } from '../../shared/types';
@@ -7,16 +8,20 @@ import { CATEGORIES } from '../../shared/types';
 /** Check if Chrome built-in AI is available */
 export async function isGeminiNanoAvailable(): Promise<boolean> {
   try {
-    // @ts-expect-error — chrome.ai is not yet in the type definitions
+    // New API: window.ai.languageModel (Chrome 131+)
+    if (typeof window !== 'undefined' && 'ai' in window) {
+      // @ts-expect-error — experimental API
+      const ai = window.ai;
+      if (ai?.languageModel) {
+        const capabilities = await ai.languageModel.capabilities();
+        return capabilities?.available === 'readily' || capabilities?.available === 'after-download';
+      }
+    }
+    // Legacy API fallback (deprecated)
+    // @ts-expect-error — experimental API
     if (typeof chrome !== 'undefined' && chrome.ai?.canCreateTextSession) {
       const status = await chrome.ai.canCreateTextSession();
       return status === 'readily' || status === 'after-download';
-    }
-    // Fallback: try the global AI API
-    if (typeof globalThis !== 'undefined' && 'ai' in globalThis) {
-      // @ts-expect-error — experimental API
-      const availability = await globalThis.ai.canCreateTextSession();
-      return availability === 'readily' || availability === 'after-download';
     }
     return false;
   } catch {
@@ -24,16 +29,21 @@ export async function isGeminiNanoAvailable(): Promise<boolean> {
   }
 }
 
-/** Create a Gemini Nano text session */
+/** Create a Gemini Nano session */
 async function createSession(): Promise<any> {
   try {
+    // New API: window.ai.languageModel.create()
+    if (typeof window !== 'undefined' && 'ai' in window) {
+      // @ts-expect-error — experimental API
+      const ai = window.ai;
+      if (ai?.languageModel?.create) {
+        return await ai.languageModel.create();
+      }
+    }
+    // Legacy API fallback
     // @ts-expect-error — experimental API
     if (chrome.ai?.createTextSession) {
       return await chrome.ai.createTextSession();
-    }
-    // @ts-expect-error — experimental API
-    if (globalThis.ai?.createTextSession) {
-      return await globalThis.ai.createTextSession();
     }
     throw new Error('No AI API available');
   } catch (err) {
@@ -65,7 +75,7 @@ function parseCategory(response: string): CategoryName | null {
   const lower = cleaned.toLowerCase();
   for (const cat of CATEGORIES) {
     if (cat.toLowerCase() === lower || cat.toLowerCase().includes(lower)) {
-      return cat;
+      return cat as CategoryName;
     }
   }
 

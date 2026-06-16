@@ -75,8 +75,9 @@ export function DashboardView() {
 
   if (!data) return <div className="view-placeholder">Loading...</div>;
 
-  // Estimate memory savings (rough: ~50MB per active tab, ~0.5MB per hibernated)
-  const memorySavedMB = data.hibernatedTabs * 49.5;
+  // Note: actual memory savings vary by tab content and browser state
+  // This is a rough estimate for display purposes only
+  const memorySavedMB = data.hibernatedTabs * 50;
   const memorySaved = memorySavedMB > 1024
     ? `${(memorySavedMB / 1024).toFixed(1)} GB`
     : `${memorySavedMB.toFixed(0)} MB`;
