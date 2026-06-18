@@ -132,11 +132,13 @@ export default function App() {
         </div>
         {view === 'tabs' && (
           <div className="header-actions">
-            <button className="btn btn-primary" onClick={handleSmartGroup} disabled={isLoading} title="Auto-group all tabs by topic">
-              {isLoading ? '⏳' : '🧠'} Smart Group
+            <button className="btn btn-primary btn-icon-label" onClick={handleSmartGroup} disabled={isLoading} title="Auto-group all tabs by topic">
+              <span className="btn-icon">{isLoading ? '⏳' : '🧠'}</span>
+              <span className="btn-label">Smart Group</span>
             </button>
-            <button className="btn btn-secondary" onClick={handleCloseDuplicates} disabled={isLoading} title="Close duplicate tabs">
-              🔗 Dedup
+            <button className="btn btn-secondary btn-icon-label" onClick={handleCloseDuplicates} disabled={isLoading} title="Close duplicate tabs">
+              <span className="btn-icon">🔗</span>
+              <span className="btn-label">Dedup</span>
             </button>
             <button className="btn btn-secondary" onClick={handleHibernateAll} disabled={isLoading} title="Hibernate inactive tabs">
               💤

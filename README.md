@@ -23,7 +23,7 @@ Most tab managers just group by domain. TabCraft understands what each tab is ac
 | Feature | Description |
 |---------|-------------|
 | **AI Smart Grouping** | Groups tabs by topic using on-device AI (Gemini Nano) with rule-based fallback |
-| **Domain Rules** | 200+ built-in rules, fully editable, import/export |
+| **Domain Rules** | 390+ built-in rules, fully editable, import/export |
 | **Duplicate Detection** | Smart URL matching that ignores tracking parameters |
 | **Tab Hibernation** | Auto-suspend inactive tabs to save up to 95% memory |
 | **Side Panel UI** | Modern glassmorphism interface with dark/light mode |

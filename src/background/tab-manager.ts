@@ -70,26 +70,29 @@ export class TabManager {
     const tabs = await getAllTabs();
     const settings = await Storage.getSettings();
 
-    // Classify all tabs
-    const classifications = new Map<number, ClassificationResult>();
+    // Bucket tabs into groups — by category (smart) or by domain (domain mode).
+    // Unclassified tabs land in an "Other" group so one click leaves nothing
+    // ungrouped in the native tab strip.
+    const groupTabs = new Map<string, number[]>();
     for (const tab of tabs) {
-      if (tab.url && !tab.url.startsWith('chrome://') && !tab.pinned) {
-        const result = await this.classifyTab(tab);
-        classifications.set(tab.id!, result);
-      }
-    }
+      if (!tab.url || tab.url.startsWith('chrome://') || tab.pinned) continue;
 
-    // Group by category — unclassified tabs go into an "Other" group too,
-    // so a single Smart Group click leaves no tab ungrouped in the native tab strip.
-    const categoryTabs = new Map<string, number[]>();
-    for (const [tabId, result] of classifications) {
-      const existing = categoryTabs.get(result.category) || [];
-      existing.push(tabId);
-      categoryTabs.set(result.category, existing);
+      let bucket: string;
+      if (settings.groupingMode === 'domain') {
+        const domain = extractDomain(tab.url);
+        bucket = domain ? (getFriendlyName(domain) || domain) : 'Other';
+      } else {
+        const result = await this.classifyTab(tab);
+        bucket = result.category;
+      }
+
+      const existing = groupTabs.get(bucket) || [];
+      existing.push(tab.id!);
+      groupTabs.set(bucket, existing);
     }
 
     // Filter by minimum tabs per group, then sort so "Other" comes last
-    const validGroups = Array.from(categoryTabs.entries())
+    const validGroups = Array.from(groupTabs.entries())
       .filter(([, tabIds]) => tabIds.length >= settings.minTabsPerGroup)
       .sort(([a], [b]) => {
         if (a === 'Other') return 1;
@@ -99,19 +102,19 @@ export class TabManager {
 
     // Create Chrome tab groups
     let groupCount = 0;
-    for (const [category, tabIds] of validGroups) {
+    for (const [name, tabIds] of validGroups) {
       try {
         const groupId = await chrome.tabs.group({ tabIds });
-        // "Other" always grey; real categories cycle through the palette
-        const color = category === 'Other' ? 'grey' : getColorForIndex(groupCount);
+        // "Other" always grey; real groups cycle through the palette
+        const color = name === 'Other' ? 'grey' : getColorForIndex(groupCount);
         await chrome.tabGroups.update(groupId, {
-          title: category,
+          title: name,
           color,
           collapsed: false,
         });
         groupCount++;
       } catch (err) {
-        console.error(`[TabCraft] Failed to group "${category}":`, err);
+        console.error(`[TabCraft] Failed to group "${name}":`, err);
       }
     }
 
