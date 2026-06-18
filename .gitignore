@@ -34,3 +34,6 @@ coverage/
 # Misc
 *.tgz
 .cache/
+
+# npm lockfile (project uses --ignore-scripts installs locally)
+package-lock.json
