@@ -423,7 +423,7 @@
 .dedup-group.cross-window { border-left: 3px solid var(--warning); }
 .dedup-group-header { padding: 10px 12px; background: var(--bg-secondary); }
 .dedup-group-info { display: flex; align-items: center; gap: 8px; }
-.dedup-group-url {
+.dedup-group-domain {
   font-family: monospace; font-size: 13px; font-weight: 600; flex: 1;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
@@ -434,9 +434,10 @@
 .dedup-badge.count { background: var(--bg-hover); color: var(--text-secondary); }
 .dedup-group-tabs { display: flex; flex-direction: column; }
 .dedup-tab {
-  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  display: flex; flex-direction: column; gap: 4px; padding: 8px 12px;
   cursor: pointer; transition: all 0.15s; border-bottom: 1px solid var(--border-light);
 }
+.dedup-tab-main { display: flex; align-items: center; gap: 8px; }
 .dedup-tab:last-child { border-bottom: none; }
 .dedup-tab:hover { background: var(--bg-hover); }
 .dedup-tab.keep { background: rgba(34,197,94,0.08); }
@@ -450,6 +451,20 @@
 .dedup-tab-window {
   font-size: 10px; color: var(--text-muted); background: var(--bg-secondary);
   padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+}
+.dedup-tab-url {
+  font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding-left: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dedup-url-common { color: var(--text-muted); }
+.dedup-url-diff {
+  color: var(--warning); font-weight: 600;
+  background: rgba(245,158,11,0.12); border-radius: 3px; padding: 0 2px;
+}
+.dedup-group-normalized {
+  margin-top: 6px; font-size: 10px; color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 /* ── Scrollbar ─────────────────────────────────────────── */

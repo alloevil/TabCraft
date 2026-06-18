@@ -79,25 +79,31 @@ export class TabManager {
       }
     }
 
-    // Group by category
+    // Group by category — unclassified tabs go into an "Other" group too,
+    // so a single Smart Group click leaves no tab ungrouped in the native tab strip.
     const categoryTabs = new Map<string, number[]>();
     for (const [tabId, result] of classifications) {
-      if (result.category === 'Other') continue;
       const existing = categoryTabs.get(result.category) || [];
       existing.push(tabId);
       categoryTabs.set(result.category, existing);
     }
 
-    // Filter by minimum tabs per group
+    // Filter by minimum tabs per group, then sort so "Other" comes last
     const validGroups = Array.from(categoryTabs.entries())
-      .filter(([, tabIds]) => tabIds.length >= settings.minTabsPerGroup);
+      .filter(([, tabIds]) => tabIds.length >= settings.minTabsPerGroup)
+      .sort(([a], [b]) => {
+        if (a === 'Other') return 1;
+        if (b === 'Other') return -1;
+        return 0;
+      });
 
     // Create Chrome tab groups
     let groupCount = 0;
     for (const [category, tabIds] of validGroups) {
       try {
         const groupId = await chrome.tabs.group({ tabIds });
-        const color = getColorForIndex(groupCount);
+        // "Other" always grey; real categories cycle through the palette
+        const color = category === 'Other' ? 'grey' : getColorForIndex(groupCount);
         await chrome.tabGroups.update(groupId, {
           title: category,
           color,

@@ -226,38 +226,52 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
           {duplicates.map(group => {
             const keepId = selected.get(group.normalizedUrl);
             const crossWindow = new Set(group.tabs.map(t => t.windowId)).size > 1;
+            // Common prefix shared by every real URL in this group — the part
+            // after it is what actually differs and gets highlighted per tab.
+            const groupUrls = group.tabs.map(t => t.tab.url || '');
+            const commonPrefix = longestCommonPrefix(groupUrls);
 
             return (
               <div key={group.normalizedUrl} className={`dedup-group ${crossWindow ? 'cross-window' : ''}`}>
                 <div className="dedup-group-header">
                   <div className="dedup-group-info">
-                    <span className="dedup-group-url" title={group.displayUrl}>
-                      {getCleanDomain(group.displayUrl)}
-                    </span>
+                    <span className="dedup-group-domain">{getCleanDomain(group.displayUrl)}</span>
                     {crossWindow && <span className="dedup-badge cross">Cross-Window</span>}
                     <span className="dedup-badge count">{group.tabs.length} tabs</span>
                   </div>
+                  <div className="dedup-group-normalized" title="Normalized URL used for matching">
+                    ≈ {group.normalizedUrl}
+                  </div>
                 </div>
                 <div className="dedup-group-tabs">
-                  {group.tabs.map((entry, idx) => (
+                  {group.tabs.map((entry) => {
+                    const fullUrl = entry.tab.url || '';
+                    return (
                     <div
                       key={entry.tab.id}
                       className={`dedup-tab ${entry.tab.id === keepId ? 'keep' : 'remove'}`}
                       onClick={() => toggleKeep(group.normalizedUrl, entry.tab.id!)}
                     >
-                      <span className="dedup-tab-radio">
-                        {entry.tab.id === keepId ? '●' : '○'}
-                      </span>
-                      {entry.tab.favIconUrl && (
-                        <img src={entry.tab.favIconUrl} className="dedup-tab-favicon" alt="" />
-                      )}
-                      <span className="dedup-tab-title">{entry.tab.title || 'Untitled'}</span>
-                      <span className="dedup-tab-window">
-                        W{entry.windowId}
-                        {entry.tab.active && ' (active)'}
-                      </span>
+                      <div className="dedup-tab-main">
+                        <span className="dedup-tab-radio">
+                          {entry.tab.id === keepId ? '●' : '○'}
+                        </span>
+                        {entry.tab.favIconUrl && (
+                          <img src={entry.tab.favIconUrl} className="dedup-tab-favicon" alt="" />
+                        )}
+                        <span className="dedup-tab-title">{entry.tab.title || 'Untitled'}</span>
+                        <span className="dedup-tab-window">
+                          W{entry.windowId}
+                          {entry.tab.active && ' (active)'}
+                        </span>
+                      </div>
+                      <div className="dedup-tab-url" title={fullUrl}>
+                        <span className="dedup-url-common">{commonPrefix}</span>
+                        <span className="dedup-url-diff">{fullUrl.slice(commonPrefix.length) || '∅'}</span>
+                      </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -293,4 +307,18 @@ function getCleanDomain(url: string): string {
   } catch {
     return url.slice(0, 50);
   }
+}
+
+/** Longest common prefix across a set of URLs — the shared part we dim,
+ *  so the differing tail of each duplicate stands out. */
+function longestCommonPrefix(urls: string[]): string {
+  if (urls.length < 2) return '';
+  let prefix = urls[0];
+  for (const url of urls.slice(1)) {
+    while (!url.startsWith(prefix)) {
+      prefix = prefix.slice(0, -1);
+      if (!prefix) return '';
+    }
+  }
+  return prefix;
 }
