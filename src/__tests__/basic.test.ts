@@ -117,3 +117,34 @@ describe('category parsing', () => {
     expect(parseCategory('UnknownCategory')).toBeNull();
   });
 });
+
+// Test RuleEngine — pure logic, no chrome API dependency
+describe('RuleEngine classification', async () => {
+  const { RuleEngine } = await import('../background/ai/rule-engine');
+  const engine = new RuleEngine();
+
+  it('classifies expanded domains correctly', () => {
+    expect(engine.classify('https://www.zhihu.com/question/1', '知乎').category).toBe('Social');
+    expect(engine.classify('https://leetcode.com/problems/two-sum', 'LeetCode').category).toBe('Development');
+    expect(engine.classify('https://www.bilibili.com/video/x', 'B站').category).toBe('Entertainment');
+    expect(engine.classify('https://booking.com/hotel/x', 'Booking').category).toBe('Travel');
+  });
+
+  it('matches subdomains via normalization', () => {
+    // mail.qq.com is a seed rule; sub.unknown still falls through
+    expect(engine.classify('https://platform.openai.com/docs', 'OpenAI').category).toBe('AI & ML');
+  });
+
+  it('does NOT misclassify short keywords as substrings', () => {
+    // "ai" must not match "rain"; "code" must not match "barcode"
+    const rain = engine.classify('https://unknown-weather-xyz.test/', 'Rain forecast today');
+    expect(rain.category).not.toBe('AI & ML');
+    const barcode = engine.classify('https://unknown-shop-xyz.test/', 'Barcode scanner');
+    expect(barcode.category).not.toBe('Development');
+  });
+
+  it('still matches whole-word keywords in titles', () => {
+    const ai = engine.classify('https://unknown-xyz.test/', 'New AI model released');
+    expect(ai.category).toBe('AI & ML');
+  });
+});

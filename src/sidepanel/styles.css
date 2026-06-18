@@ -39,11 +39,11 @@
 
 /* ── Header ────────────────────────────────────────────── */
 .header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 12px 16px; background: var(--bg-glass); backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-glass);
 }
-.header-brand { display: flex; align-items: center; gap: 8px; }
+.header-brand { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .logo {
   font-size: 20px; background: linear-gradient(135deg, var(--accent), #a855f7);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -52,7 +52,7 @@
   font-size: 16px; font-weight: 700; background: linear-gradient(135deg, var(--accent), #a855f7);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-.header-actions { display: flex; gap: 6px; }
+.header-actions { display: flex; gap: 6px; flex-shrink: 1; min-width: 0; justify-content: flex-end; }
 
 /* ── Buttons ───────────────────────────────────────────── */
 .btn {
@@ -68,6 +68,13 @@
 .btn-primary:hover { background: linear-gradient(135deg, var(--accent-hover), #8b5cf6); }
 .btn-secondary { background: var(--bg-card); }
 .btn-danger { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: var(--danger); }
+.btn-icon-label { display: inline-flex; align-items: center; gap: 4px; }
+/* On narrow side-panel widths, collapse the header action buttons to icons
+   only so they never overlap the brand title. */
+@media (max-width: 360px) {
+  .header-actions .btn-label { display: none; }
+  .header-actions .btn { padding: 6px 8px; }
+}
 .btn-danger:hover { background: rgba(239,68,68,0.25); }
 .full-width { width: 100%; justify-content: center; display: flex; }
 
