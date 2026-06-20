@@ -75,17 +75,26 @@ function setupListeners() {
 
   // Self-learning: when the user manually moves a tab into a named group,
   // remember that domain→group mapping so future tabs classify the same way.
-  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+  // Debounced per-tab so dragging a batch of tabs around collapses into one
+  // write per tab instead of firing on every intermediate groupId change.
+  const learnTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.groupId === undefined || changeInfo.groupId === -1) return;
-    try {
-      const tab = await chrome.tabs.get(tabId);
-      const group = await chrome.tabGroups.get(changeInfo.groupId);
-      if (group?.title) {
-        await tabManager.learnFromManualGrouping(tab, group.title);
+    const groupId = changeInfo.groupId;
+    const prev = learnTimers.get(tabId);
+    if (prev) clearTimeout(prev);
+    learnTimers.set(tabId, setTimeout(async () => {
+      learnTimers.delete(tabId);
+      try {
+        const tab = await chrome.tabs.get(tabId);
+        const group = await chrome.tabGroups.get(groupId);
+        if (group?.title) {
+          await tabManager.learnFromManualGrouping(tab, group.title);
+        }
+      } catch {
+        // tab/group may have been removed mid-flight; ignore
       }
-    } catch {
-      // tab/group may have been removed mid-flight; ignore
-    }
+    }, 600));
   });
 
   // Listen for messages from side panel
@@ -192,6 +201,29 @@ async function handleMessage(message: { action: string; [key: string]: any }) {
 
     case 'isAiReady':
       return tabManager.isAiReady();
+
+    case 'learnedCount':
+      return Storage.getLearnedMappingCount();
+
+    case 'clearLearned':
+      return tabManager.clearLearnedMappings();
+
+    case 'snoozeTab':
+      await Storage.addSnooze(message.record);
+      return true;
+
+    case 'getSnoozed':
+      return Storage.getSnoozed();
+
+    case 'restoreSnoozed': {
+      const all = await Storage.getSnoozed();
+      const rec = all.find((s) => s.id === message.id);
+      if (rec) {
+        await chrome.tabs.create({ url: rec.url, active: false });
+        await Storage.removeSnooze(message.id);
+      }
+      return true;
+    }
 
     default:
       throw new Error(`Unknown action: ${message.action}`);

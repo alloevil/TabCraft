@@ -22,9 +22,24 @@ export function GroupCard({ group, tabs, onRefresh }: GroupCardProps) {
   }
 
   async function handleSnoozeGroup() {
-    // Close all tabs in group, save for later restoration
-    const urls = tabs.map(t => ({ url: t.url || '', title: t.title || '' }));
-    // TODO: Implement snooze storage
+    // Persist every tab BEFORE closing it, so snoozing is recoverable rather
+    // than a silent close. Records land in storage (`snoozed`) keyed per tab.
+    const ok = confirm(`Snooze "${group?.title || 'group'}"? Its ${tabs.length} tab(s) will close and can be restored later.`);
+    if (!ok) return;
+    const now = Date.now();
+    for (const tab of tabs) {
+      if (!tab.url) continue;
+      await chrome.runtime.sendMessage({
+        action: 'snoozeTab',
+        record: {
+          id: `sn_${now}_${tab.id ?? Math.floor(now % 100000)}`,
+          url: tab.url,
+          title: tab.title || tab.url,
+          wakeAt: 0, // 0 = manual restore only (no timed wake yet)
+          createdAt: now,
+        },
+      }).catch(() => {});
+    }
     for (const tab of tabs) {
       if (tab.id) await chrome.tabs.remove(tab.id);
     }

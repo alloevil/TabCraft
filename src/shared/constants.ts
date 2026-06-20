@@ -49,6 +49,9 @@ export const SESSION_SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
 /** Max undo history */
 export const MAX_UNDO_HISTORY = 10;
 
+/** Max learned domain→category mappings to retain (LRU-evicted) */
+export const MAX_LEARNED_MAPPINGS = 500;
+
 /** Snooze presets */
 export const SNOOZE_PRESETS = [
   { label: 'In 1 hour', ms: 60 * 60 * 1000 },

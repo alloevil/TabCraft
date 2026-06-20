@@ -325,3 +325,54 @@ describe('two-phase classify strategy', () => {
     expect(buckets.get(9)).toBe('Other');
   });
 });
+
+// Test the LRU eviction logic for learned domain→category mappings.
+// Inlined to mirror this file's convention (real method needs chrome.storage).
+describe('learned mappings LRU', () => {
+  const MAX = 3;
+
+  /** Pure core of Storage.setLearnedMapping. */
+  function setMapping(
+    mappings: Record<string, string>,
+    domain: string,
+    category: string
+  ): Record<string, string> {
+    delete mappings[domain];          // move to MRU position
+    mappings[domain] = category;
+    const keys = Object.keys(mappings);
+    if (keys.length > MAX) {
+      for (const old of keys.slice(0, keys.length - MAX)) delete mappings[old];
+    }
+    return mappings;
+  }
+
+  it('keeps insertion order and caps at MAX, evicting oldest', () => {
+    let m: Record<string, string> = {};
+    m = setMapping(m, 'a.com', 'Dev');
+    m = setMapping(m, 'b.com', 'Social');
+    m = setMapping(m, 'c.com', 'News');
+    m = setMapping(m, 'd.com', 'Work'); // exceeds MAX → evict a.com
+    expect(Object.keys(m)).toEqual(['b.com', 'c.com', 'd.com']);
+    expect(m['a.com']).toBeUndefined();
+  });
+
+  it('re-learning a domain refreshes its recency (not evicted next)', () => {
+    let m: Record<string, string> = {};
+    m = setMapping(m, 'a.com', 'Dev');
+    m = setMapping(m, 'b.com', 'Social');
+    m = setMapping(m, 'c.com', 'News');
+    m = setMapping(m, 'a.com', 'AI & ML'); // touch a.com → now MRU
+    m = setMapping(m, 'd.com', 'Work');     // evict oldest = b.com, not a.com
+    expect(m['a.com']).toBe('AI & ML');
+    expect(m['b.com']).toBeUndefined();
+    expect(Object.keys(m)).toEqual(['c.com', 'a.com', 'd.com']);
+  });
+
+  it('updates the category when re-learning an existing domain', () => {
+    let m: Record<string, string> = {};
+    m = setMapping(m, 'a.com', 'Dev');
+    m = setMapping(m, 'a.com', 'Finance');
+    expect(m['a.com']).toBe('Finance');
+    expect(Object.keys(m).length).toBe(1);
+  });
+});
