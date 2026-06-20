@@ -22,6 +22,15 @@ function matchesWord(haystack: string, keyword: string): boolean {
   return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(haystack);
 }
 
+/** Deterministic tie-break order for title scoring. Specific, unambiguous
+ *  topics come BEFORE broad/platform-ish ones, so a title that scores equally
+ *  for "Music" and "Entertainment" resolves to the more specific "Music". */
+const CATEGORY_PRIORITY: string[] = [
+  'Finance', 'Health', 'Travel', 'Gaming', 'Music', 'Video', 'Research',
+  'Education', 'Design', 'Shopping', 'AI & ML', 'Development', 'Work',
+  'Communication', 'News', 'Social', 'Entertainment', 'Other',
+];
+
 /** Normalize domain for matching (remove subdomains for common patterns) */
 function normalizeDomain(domain: string): string {
   // For sites like mail.google.com -> google.com
@@ -611,32 +620,58 @@ export class RuleEngine {
     };
   }
 
-  /** Title keyword analysis */
+  /** Title keyword analysis — weighted scoring.
+   *
+   *  Instead of returning the first category whose keyword list matches (which
+   *  let table order decide ties and let a broad category steal multi-topic
+   *  titles), we score every category and return the strongest. Score = sum of
+   *  matched keyword weights; multi-word phrases ("machine learning") weigh more
+   *  than single tokens ("ai") because they are far less ambiguous. Ties break
+   *  by CATEGORY_PRIORITY so the outcome is deterministic and testable. */
   private classifyByTitle(title: string): string | null {
     const lower = title.toLowerCase();
 
     const keywordMap: Record<string, string[]> = {
-      'Development': ['api', 'docs', 'documentation', 'sdk', 'npm', 'pip', 'github', 'gitlab', 'code', 'debug', 'terminal', 'console', 'localhost', 'webpack', 'vite', 'docker', 'kubernetes', 'k8s'],
-      'AI & ML': ['gpt', 'llm', 'ai', 'machine learning', 'neural', 'model', 'inference', 'training', 'transformer', 'diffusion', 'embedding', 'chatgpt', 'claude', 'gemini'],
-      'Social': ['twitter', 'reddit', 'instagram', 'facebook', 'linkedin', 'mastodon', 'social', 'post', 'feed', 'timeline'],
-      'Shopping': ['shop', 'cart', 'checkout', 'buy', 'price', 'deal', 'sale', 'amazon', 'ebay', 'etsy'],
-      'News': ['news', 'breaking', 'report', 'article', 'headline', 'techcrunch', 'verge', 'arstechnica'],
-      'Entertainment': ['video', 'watch', 'stream', 'movie', 'show', 'episode', 'youtube', 'netflix', 'twitch', 'spotify'],
-      'Finance': ['stock', 'crypto', 'bitcoin', 'trading', 'market', 'portfolio', 'invest', 'finance', 'wallet'],
-      'Work': ['meeting', 'calendar', 'task', 'project', 'sprint', 'jira', 'notion', 'trello', 'asana', 'kanban'],
-      'Communication': ['mail', 'email', 'inbox', 'message', 'chat', 'slack', 'discord', 'zoom', 'teams', 'whatsapp'],
-      'Design': ['design', 'figma', 'sketch', 'prototype', 'wireframe', 'ui', 'ux', 'adobe', 'canva'],
-      'Research': ['paper', 'journal', 'research', 'study', 'arxiv', 'scholar', 'pubmed', 'thesis'],
-      'Education': ['course', 'learn', 'tutorial', 'lesson', 'academy', 'udemy', 'coursera', 'mooc'],
+      'Development': ['api', 'docs', 'documentation', 'sdk', 'npm', 'pip', 'github', 'gitlab', 'code', 'debug', 'terminal', 'console', 'localhost', 'webpack', 'vite', 'docker', 'kubernetes', 'k8s', 'compiler', 'runtime', 'framework', 'library', 'repository', 'pull request', 'merge', 'deploy'],
+      'AI & ML': ['gpt', 'llm', 'ai', 'machine learning', 'neural', 'model', 'inference', 'training', 'transformer', 'diffusion', 'embedding', 'chatgpt', 'claude', 'gemini', 'deep learning', 'fine-tuning', 'prompt', 'dataset', 'hugging face'],
+      'Social': ['twitter', 'reddit', 'instagram', 'facebook', 'linkedin', 'mastodon', 'social', 'post', 'feed', 'timeline', 'follower', 'tweet', 'profile', 'tiktok', 'weibo', 'threads'],
+      'Shopping': ['shop', 'cart', 'checkout', 'buy', 'price', 'deal', 'sale', 'amazon', 'ebay', 'etsy', 'order', 'shipping', 'discount', 'coupon', 'store', 'product', 'add to cart', 'wishlist', 'taobao', 'aliexpress'],
+      'News': ['news', 'breaking', 'report', 'article', 'headline', 'techcrunch', 'verge', 'arstechnica', 'reuters', 'bbc', 'cnn', 'press', 'editorial', 'coverage', 'bloomberg'],
+      'Entertainment': ['video', 'watch', 'stream', 'movie', 'show', 'episode', 'youtube', 'netflix', 'twitch', 'trailer', 'season', 'binge', 'cinema', 'film'],
+      'Music': ['music', 'song', 'album', 'playlist', 'spotify', 'soundcloud', 'lyrics', 'track', 'artist', 'concert', 'audio', 'podcast'],
+      'Video': ['youtube', 'vimeo', 'video', 'clip', 'livestream', 'webinar', 'recording'],
+      'Finance': ['stock', 'crypto', 'bitcoin', 'trading', 'market', 'portfolio', 'invest', 'finance', 'wallet', 'bank', 'budget', 'tax', 'mortgage', 'loan', 'ethereum', 'nasdaq', 'dividend', 'forex'],
+      'Work': ['meeting', 'calendar', 'task', 'project', 'sprint', 'jira', 'notion', 'trello', 'asana', 'kanban', 'standup', 'roadmap', 'okr', 'deadline', 'ticket'],
+      'Communication': ['mail', 'email', 'inbox', 'message', 'chat', 'slack', 'discord', 'zoom', 'teams', 'whatsapp', 'telegram', 'gmail', 'outlook', 'compose'],
+      'Design': ['design', 'figma', 'sketch', 'prototype', 'wireframe', 'ui', 'ux', 'adobe', 'canva', 'typography', 'palette', 'mockup', 'illustrator', 'photoshop'],
+      'Research': ['paper', 'journal', 'research', 'study', 'arxiv', 'scholar', 'pubmed', 'thesis', 'citation', 'preprint', 'abstract', 'doi'],
+      'Education': ['course', 'learn', 'tutorial', 'lesson', 'academy', 'udemy', 'coursera', 'mooc', 'lecture', 'quiz', 'homework', 'exam', 'syllabus', 'khan academy'],
+      'Health': ['health', 'fitness', 'workout', 'diet', 'nutrition', 'symptom', 'doctor', 'medical', 'clinic', 'wellness', 'calories', 'webmd', 'exercise', 'meditation'],
+      'Travel': ['flight', 'hotel', 'booking', 'trip', 'travel', 'airbnb', 'itinerary', 'destination', 'expedia', 'vacation', 'airline', 'reservation', 'tripadvisor'],
+      'Gaming': ['game', 'gaming', 'steam', 'playstation', 'xbox', 'nintendo', 'twitch', 'esports', 'gameplay', 'speedrun', 'fps', 'rpg', 'minecraft'],
     };
 
+    let best: { category: string; score: number } | null = null;
     for (const [category, keywords] of Object.entries(keywordMap)) {
-      if (keywords.some(kw => matchesWord(lower, kw))) {
-        return category;
+      let score = 0;
+      for (const kw of keywords) {
+        if (matchesWord(lower, kw)) {
+          // Multi-word phrases are far less ambiguous → weight 2; single token → 1.
+          score += kw.includes(' ') ? 2 : 1;
+        }
+      }
+      if (score === 0) continue;
+      if (
+        !best ||
+        score > best.score ||
+        (score === best.score &&
+          CATEGORY_PRIORITY.indexOf(category) < CATEGORY_PRIORITY.indexOf(best.category))
+      ) {
+        best = { category, score };
       }
     }
 
-    return null;
+    return best ? best.category : null;
   }
 
   /** Get all loaded rules */

@@ -69,15 +69,26 @@ async function createSession(): Promise<LanguageModelSession> {
   throw new Error('No AI API available');
 }
 
+/** Shared guidance that steers the (small, on-device) model away from the
+ *  most common mistakes. Borrowed from the "classify by content, not platform"
+ *  principle used by larger LLM tab organizers — especially valuable for a
+ *  weak model that otherwise shortcuts on the domain. */
+const CLASSIFY_GUIDELINES = `Guidelines:
+- Classify by the tab's CONTENT and purpose, not just its website. Two tabs on the same site (e.g. YouTube) can belong to different categories — a coding tutorial is "Education" or "Development", a song is "Music".
+- "AI & ML" is for AI tools/research (ChatGPT, models, papers). "Development" is for coding/docs/repos. Prefer the more specific one.
+- Use "Other" only when nothing fits.`;
+
 /** Build classification prompt */
 function buildPrompt(url: string, title: string): string {
   const categories = CATEGORIES.join(', ');
   return `Classify this browser tab into exactly ONE of these categories: ${categories}
 
+${CLASSIFY_GUIDELINES}
+
 URL: ${url}
 Title: ${title}
 
-Reply with ONLY the category name, nothing else. If unsure, reply "Other".`;
+Reply with ONLY the category name, nothing else.`;
 }
 
 /** Build a single prompt that classifies many tabs at once — far faster than
@@ -88,6 +99,8 @@ function buildBatchPrompt(tabs: Array<{ url: string; title: string }>): string {
     .map((t, i) => `${i + 1}. Title: ${t.title}\n   URL: ${t.url}`)
     .join('\n');
   return `Classify each browser tab into exactly ONE of these categories: ${categories}
+
+${CLASSIFY_GUIDELINES}
 
 Tabs:
 ${list}
