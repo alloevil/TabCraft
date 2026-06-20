@@ -147,6 +147,27 @@ describe('RuleEngine classification', async () => {
     const ai = engine.classify('https://unknown-xyz.test/', 'New AI model released');
     expect(ai.category).toBe('AI & ML');
   });
+
+  it('weighted scoring: picks the category with the most keyword hits', () => {
+    // Title hits Music three ways (music, album, playlist) vs Entertainment once
+    // (stream). Old first-match logic returned Entertainment (listed earlier);
+    // weighted scoring must now pick Music.
+    const r = engine.classify('https://unknown-host.test/', 'Stream this album playlist — new music');
+    expect(r.category).toBe('Music');
+  });
+
+  it('weighted scoring: multi-word phrase outweighs a single ambiguous token', () => {
+    // "machine learning" (phrase, weight 2) for AI&ML beats a lone "code"
+    // (weight 1) for Development.
+    const r = engine.classify('https://unknown-host.test/', 'A machine learning code sample');
+    expect(r.category).toBe('AI & ML');
+  });
+
+  it('expanded lifestyle keywords no longer fall through to Other', () => {
+    expect(engine.classify('https://unknown-h.test/', 'Best hotel booking for our trip').category).toBe('Travel');
+    expect(engine.classify('https://unknown-h.test/', 'My workout and nutrition plan').category).toBe('Health');
+    expect(engine.classify('https://unknown-h.test/', 'Steam game library on sale').category).not.toBe('Other');
+  });
 });
 
 // Test colorForCategory — stable category→color mapping (imported directly,
