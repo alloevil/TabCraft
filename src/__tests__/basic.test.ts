@@ -244,3 +244,84 @@ describe('parseBatchResponse', () => {
     expect(parseBatchResponse('1. Bogus\n2. Social', 2)).toEqual([null, 'Social']);
   });
 });
+
+// Test the two-phase classify strategy: rule hits are locked in, only
+// 'fallback' results are sent to AI, and AI only overrides when confident.
+// Inlined to mirror this file's convention (the real method needs chrome+AI).
+describe('two-phase classify strategy', () => {
+  type Src = 'rule' | 'fallback';
+  interface RuleResult { category: string; source: Src; }
+  interface AiResult { category: string; confidence: number; }
+
+  /** Pure decision core extracted from TabManager.classifyAllTabs. */
+  function decide(
+    tabs: Array<{ id: number; rule: RuleResult }>,
+    aiReady: boolean,
+    ai: (uncertain: number[]) => Map<number, AiResult>
+  ): Map<number, string> {
+    const buckets = new Map<number, string>();
+    const needsAi: number[] = [];
+    for (const t of tabs) {
+      buckets.set(t.id, t.rule.category);
+      if (t.rule.source === 'fallback') needsAi.push(t.id);
+    }
+    if (aiReady && needsAi.length > 0) {
+      const results = ai(needsAi);
+      for (const id of needsAi) {
+        const r = results.get(id);
+        if (r && r.confidence > 0.7 && r.category) buckets.set(id, r.category);
+      }
+    }
+    return buckets;
+  }
+
+  it('locks in rule hits and never sends them to AI', () => {
+    const aiCalls: number[] = [];
+    const buckets = decide(
+      [
+        { id: 1, rule: { category: 'Development', source: 'rule' } },
+        { id: 2, rule: { category: 'Social', source: 'rule' } },
+      ],
+      true,
+      (ids) => { aiCalls.push(...ids); return new Map(); }
+    );
+    expect(buckets.get(1)).toBe('Development');
+    expect(buckets.get(2)).toBe('Social');
+    expect(aiCalls).toEqual([]); // no rule hit was sent to AI
+  });
+
+  it('sends only fallback tabs to AI and overrides when confident', () => {
+    const sent: number[] = [];
+    const buckets = decide(
+      [
+        { id: 1, rule: { category: 'Development', source: 'rule' } },
+        { id: 2, rule: { category: 'Other', source: 'fallback' } },
+      ],
+      true,
+      (ids) => { sent.push(...ids); return new Map([[2, { category: 'Finance', confidence: 0.85 }]]); }
+    );
+    expect(sent).toEqual([2]);           // only the uncertain tab
+    expect(buckets.get(1)).toBe('Development'); // rule hit untouched
+    expect(buckets.get(2)).toBe('Finance');     // AI overrode the fallback
+  });
+
+  it('keeps the rule fallback when AI is not confident enough', () => {
+    const buckets = decide(
+      [{ id: 5, rule: { category: 'Other', source: 'fallback' } }],
+      true,
+      () => new Map([[5, { category: 'Gaming', confidence: 0.5 }]]) // below 0.7
+    );
+    expect(buckets.get(5)).toBe('Other'); // low-confidence AI ignored
+  });
+
+  it('skips AI entirely when it is not ready', () => {
+    let called = false;
+    const buckets = decide(
+      [{ id: 9, rule: { category: 'Other', source: 'fallback' } }],
+      false,
+      () => { called = true; return new Map(); }
+    );
+    expect(called).toBe(false);
+    expect(buckets.get(9)).toBe('Other');
+  });
+});
