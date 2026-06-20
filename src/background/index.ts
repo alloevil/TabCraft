@@ -31,6 +31,14 @@ async function init() {
 
 /** Set up Chrome event listeners */
 function setupListeners() {
+  // Open the side panel directly when the toolbar icon is clicked, instead of
+  // requiring a second "open side panel" click. Must run on every SW startup.
+  // (openPanelOnActionClick is mutually exclusive with a default_popup — we
+  // intentionally define no popup so the icon click maps straight to the panel.)
+  chrome.sidePanel
+    ?.setPanelBehavior({ openPanelOnActionClick: true })
+    .catch((err) => console.debug('[TabCraft] setPanelBehavior unsupported:', err));
+
   // Auto-group new tabs
   chrome.tabs.onCreated.addListener(async (tab) => {
     const settings = await Storage.getSettings();

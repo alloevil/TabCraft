@@ -50,8 +50,7 @@ npm run build          # 产物在 build/chrome-mv3-prod/
 
 TabCraft 的主界面是 Chrome 的**侧边栏（Side Panel）**：
 
-- 点击工具栏的 TabCraft 图标，或
-- 点击地址栏右侧的侧边栏图标，选择 TabCraft
+- **点击工具栏的 TabCraft 图标即可直接打开**（再次点击关闭）。
 
 侧边栏会停靠在浏览器右侧，列出当前窗口的所有标签页，顶部是导航栏。
 
