@@ -168,6 +168,38 @@ describe('RuleEngine classification', async () => {
     expect(engine.classify('https://unknown-h.test/', 'My workout and nutrition plan').category).toBe('Health');
     expect(engine.classify('https://unknown-h.test/', 'Steam game library on sale').category).not.toBe('Other');
   });
+
+  it('classifies by URL path when domain is unknown and title is blank', () => {
+    // path carries the signal; title empty so it cannot help
+    expect(engine.classify('https://unknown-site.test/finance/portfolio/holdings', '').category).toBe('Finance');
+    expect(engine.classify('https://unknown-site.test/docs/api/reference', '').category).toBe('Development');
+  });
+
+  it('URL path ranks above title keywords', () => {
+    // path says Shopping (checkout/cart), title weakly says News (article).
+    // Path is structured signal → should win and be marked source 'rule'.
+    const r = engine.classify('https://unknown-shop.test/cart/checkout', 'Read this article');
+    expect(r.category).toBe('Shopping');
+    expect(r.source).toBe('rule');
+  });
+});
+
+// Test tokenizeUrlPath in isolation.
+describe('tokenizeUrlPath', async () => {
+  const { tokenizeUrlPath } = await import('../background/ai/rule-engine');
+
+  it('splits path + query into lowercase tokens', () => {
+    expect(tokenizeUrlPath('https://x.test/Finance/Stock-Market')).toBe('finance stock market');
+  });
+
+  it('drops pure-numeric segments and short tokens', () => {
+    // "12345" numeric, "a"/"to" too short → removed; "watch"/"video" kept
+    expect(tokenizeUrlPath('https://x.test/watch/12345/a/video?to=1')).toBe('watch video');
+  });
+
+  it('returns empty string for invalid URLs', () => {
+    expect(tokenizeUrlPath('not-a-url')).toBe('');
+  });
 });
 
 // Test colorForCategory — stable category→color mapping (imported directly,
