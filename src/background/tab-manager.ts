@@ -1,7 +1,7 @@
 // TabCraft — Tab Manager
 // Core tab lifecycle management: grouping, deduplication, organization
 
-import type { TabInfo, TabGroup, ClassificationResult } from '../shared/types';
+import type { ClassificationResult } from '../shared/types';
 import { colorForCategory } from '../shared/types';
 import { RuleEngine, extractDomain, getFriendlyName } from './ai/rule-engine';
 import { GeminiNanoClassifier } from './ai/gemini-nano';
@@ -88,6 +88,56 @@ export class TabManager {
     return result.category;
   }
 
+  /** Classify many tabs at once, returning a tabId→bucket map.
+   *
+   *  Two-phase to keep AI calls minimal while preserving the "rules first,
+   *  AI fills the gaps" semantics:
+   *    1. Run the (synchronous, free) rule engine on every tab. Confident
+   *       hits (source === 'rule') are locked in immediately.
+   *    2. Only the tabs the rules were unsure about (source === 'fallback')
+   *       are sent to the AI — in a SINGLE batch call, not one per tab.
+   *  In domain mode AI is never involved. */
+  async classifyAllTabs(
+    tabs: chrome.tabs.Tab[],
+    mode: 'smart' | 'domain'
+  ): Promise<Map<number, string>> {
+    const buckets = new Map<number, string>();
+
+    if (mode === 'domain') {
+      for (const tab of tabs) {
+        if (tab.id == null) continue;
+        const domain = extractDomain(tab.url || '');
+        buckets.set(tab.id, domain ? (getFriendlyName(domain) || domain) : 'Other');
+      }
+      return buckets;
+    }
+
+    // Phase 1 — rule engine for everyone.
+    const needsAi: chrome.tabs.Tab[] = [];
+    for (const tab of tabs) {
+      if (tab.id == null) continue;
+      const result = this.ruleEngine.classify(tab.url || '', tab.title || '');
+      buckets.set(tab.id, result.category);
+      // 'fallback' = keyword guess or default "Other" — uncertain, ask AI.
+      if (result.source === 'fallback') needsAi.push(tab);
+    }
+
+    // Phase 2 — one batch AI call for the uncertain remainder.
+    if (this.aiReady && needsAi.length > 0) {
+      const batch = needsAi.map(t => ({ url: t.url || '', title: t.title || '' }));
+      const aiResults = await this.aiClassifier.classifyBatch(batch);
+      needsAi.forEach((tab, i) => {
+        const ai = aiResults[i];
+        // Only override the rule fallback when the AI is actually confident.
+        if (ai && ai.confidence > 0.7 && ai.category) {
+          buckets.set(tab.id!, ai.category);
+        }
+      });
+    }
+
+    return buckets;
+  }
+
   /** Smart group all tabs in the current window */
   async smartGroupAll(): Promise<{ grouped: number; groups: number }> {
     const tabs = await getAllTabs();
@@ -96,13 +146,18 @@ export class TabManager {
     // Snapshot current grouping so the user can undo this action.
     await this.saveUndoSnapshot(tabs);
 
+    // Classify all groupable tabs up front (one batch AI call, not N).
+    const groupable = tabs.filter(
+      t => t.url && !t.url.startsWith('chrome://') && !t.pinned
+    );
+    const tabBuckets = await this.classifyAllTabs(groupable, settings.groupingMode);
+
     // Bucket tabs into groups — by category (smart) or by domain (domain mode).
     // Unclassified tabs land in an "Other" group so one click leaves nothing
     // ungrouped in the native tab strip.
     const groupTabs = new Map<string, number[]>();
-    for (const tab of tabs) {
-      if (!tab.url || tab.url.startsWith('chrome://') || tab.pinned) continue;
-      const bucket = await this.bucketForTab(tab, settings.groupingMode);
+    for (const tab of groupable) {
+      const bucket = tabBuckets.get(tab.id!) || 'Other';
       const existing = groupTabs.get(bucket) || [];
       existing.push(tab.id!);
       groupTabs.set(bucket, existing);
@@ -166,15 +221,17 @@ export class TabManager {
       // Add to existing group
       await chrome.tabs.group({ tabIds: tab.id!, groupId: existingGroup.id });
     } else {
-      // No existing group — form one if enough ungrouped tabs share this bucket
+      // No existing group — form one if enough ungrouped tabs share this bucket.
+      // Classify all ungrouped candidates in one batch instead of one AI call
+      // per tab.
       const allTabs = await getAllTabs();
-      const sameBucket = [];
-      for (const t of allTabs) {
-        if (t.url && !t.url.startsWith('chrome://') && !t.pinned && t.groupId === -1) {
-          if (await this.bucketForTab(t, settings.groupingMode) === bucket) {
-            sameBucket.push(t.id!);
-          }
-        }
+      const candidates = allTabs.filter(
+        t => t.url && !t.url.startsWith('chrome://') && !t.pinned && t.groupId === -1
+      );
+      const candidateBuckets = await this.classifyAllTabs(candidates, settings.groupingMode);
+      const sameBucket: number[] = [];
+      for (const t of candidates) {
+        if (candidateBuckets.get(t.id!) === bucket) sameBucket.push(t.id!);
       }
       if (sameBucket.length >= settings.minTabsPerGroup) {
         const groupId = await chrome.tabs.group({ tabIds: sameBucket });
