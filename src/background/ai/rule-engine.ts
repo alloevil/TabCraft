@@ -31,6 +31,45 @@ const CATEGORY_PRIORITY: string[] = [
   'Communication', 'News', 'Social', 'Entertainment', 'Other',
 ];
 
+/** Keyword lists per category, shared by title and URL-path scoring. */
+const KEYWORD_MAP: Record<string, string[]> = {
+  'Development': ['api', 'docs', 'documentation', 'sdk', 'npm', 'pip', 'github', 'gitlab', 'code', 'debug', 'terminal', 'console', 'localhost', 'webpack', 'vite', 'docker', 'kubernetes', 'k8s', 'compiler', 'runtime', 'framework', 'library', 'repository', 'pull request', 'merge', 'deploy'],
+  'AI & ML': ['gpt', 'llm', 'ai', 'machine learning', 'neural', 'model', 'inference', 'training', 'transformer', 'diffusion', 'embedding', 'chatgpt', 'claude', 'gemini', 'deep learning', 'fine-tuning', 'prompt', 'dataset', 'hugging face'],
+  'Social': ['twitter', 'reddit', 'instagram', 'facebook', 'linkedin', 'mastodon', 'social', 'post', 'feed', 'timeline', 'follower', 'tweet', 'profile', 'tiktok', 'weibo', 'threads'],
+  'Shopping': ['shop', 'cart', 'checkout', 'buy', 'price', 'deal', 'sale', 'amazon', 'ebay', 'etsy', 'order', 'shipping', 'discount', 'coupon', 'store', 'product', 'add to cart', 'wishlist', 'taobao', 'aliexpress'],
+  'News': ['news', 'breaking', 'report', 'article', 'headline', 'techcrunch', 'verge', 'arstechnica', 'reuters', 'bbc', 'cnn', 'press', 'editorial', 'coverage', 'bloomberg'],
+  'Entertainment': ['video', 'watch', 'stream', 'movie', 'show', 'episode', 'youtube', 'netflix', 'twitch', 'trailer', 'season', 'binge', 'cinema', 'film'],
+  'Music': ['music', 'song', 'album', 'playlist', 'spotify', 'soundcloud', 'lyrics', 'track', 'artist', 'concert', 'audio', 'podcast'],
+  'Video': ['youtube', 'vimeo', 'video', 'clip', 'livestream', 'webinar', 'recording'],
+  'Finance': ['stock', 'crypto', 'bitcoin', 'trading', 'market', 'portfolio', 'invest', 'finance', 'wallet', 'bank', 'budget', 'tax', 'mortgage', 'loan', 'ethereum', 'nasdaq', 'dividend', 'forex'],
+  'Work': ['meeting', 'calendar', 'task', 'project', 'sprint', 'jira', 'notion', 'trello', 'asana', 'kanban', 'standup', 'roadmap', 'okr', 'deadline', 'ticket'],
+  'Communication': ['mail', 'email', 'inbox', 'message', 'chat', 'slack', 'discord', 'zoom', 'teams', 'whatsapp', 'telegram', 'gmail', 'outlook', 'compose'],
+  'Design': ['design', 'figma', 'sketch', 'prototype', 'wireframe', 'ui', 'ux', 'adobe', 'canva', 'typography', 'palette', 'mockup', 'illustrator', 'photoshop'],
+  'Research': ['paper', 'journal', 'research', 'study', 'arxiv', 'scholar', 'pubmed', 'thesis', 'citation', 'preprint', 'abstract', 'doi'],
+  'Education': ['course', 'learn', 'tutorial', 'lesson', 'academy', 'udemy', 'coursera', 'mooc', 'lecture', 'quiz', 'homework', 'exam', 'syllabus', 'khan academy'],
+  'Health': ['health', 'fitness', 'workout', 'diet', 'nutrition', 'symptom', 'doctor', 'medical', 'clinic', 'wellness', 'calories', 'webmd', 'exercise', 'meditation'],
+  'Travel': ['flight', 'hotel', 'booking', 'trip', 'travel', 'airbnb', 'itinerary', 'destination', 'expedia', 'vacation', 'airline', 'reservation', 'tripadvisor'],
+  'Gaming': ['game', 'gaming', 'steam', 'playstation', 'xbox', 'nintendo', 'twitch', 'esports', 'gameplay', 'speedrun', 'fps', 'rpg', 'minecraft'],
+};
+
+/** Tokenize a URL's path + query into space-separated words for keyword
+ *  scoring. Splits on /._-?=& and the like, drops pure-numeric segments
+ *  (IDs, timestamps) and very short tokens that carry no topical signal. */
+export function tokenizeUrlPath(url: string): string {
+  let path = '';
+  try {
+    const u = new URL(url);
+    path = `${u.pathname} ${u.search}`;
+  } catch {
+    return '';
+  }
+  return path
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((tok) => tok.length >= 3 && !/^\d+$/.test(tok))
+    .join(' ');
+}
+
 /** Normalize domain for matching (remove subdomains for common patterns) */
 function normalizeDomain(domain: string): string {
   // For sites like mail.google.com -> google.com
@@ -602,7 +641,21 @@ export class RuleEngine {
       }
     }
 
-    // 4. Title-based keyword fallback
+    // 4. URL path keywords — structured, site-defined signal. More reliable
+    //    than free-text title, so it ranks above title but below domain rules.
+    const pathTokens = tokenizeUrlPath(url);
+    if (pathTokens) {
+      const pathCategory = this.scoreText(pathTokens);
+      if (pathCategory) {
+        return {
+          category: pathCategory,
+          confidence: 0.7,
+          source: 'rule',
+        };
+      }
+    }
+
+    // 5. Title-based keyword fallback
     const titleCategory = this.classifyByTitle(title);
     if (titleCategory) {
       return {
@@ -612,7 +665,7 @@ export class RuleEngine {
       };
     }
 
-    // 5. Default
+    // 6. Default
     return {
       category: 'Other',
       confidence: 0.3,
@@ -620,42 +673,23 @@ export class RuleEngine {
     };
   }
 
-  /** Title keyword analysis — weighted scoring.
-   *
-   *  Instead of returning the first category whose keyword list matches (which
-   *  let table order decide ties and let a broad category steal multi-topic
-   *  titles), we score every category and return the strongest. Score = sum of
-   *  matched keyword weights; multi-word phrases ("machine learning") weigh more
-   *  than single tokens ("ai") because they are far less ambiguous. Ties break
-   *  by CATEGORY_PRIORITY so the outcome is deterministic and testable. */
+  /** Title keyword analysis — delegates to the shared weighted scorer. */
   private classifyByTitle(title: string): string | null {
-    const lower = title.toLowerCase();
+    return this.scoreText(title.toLowerCase());
+  }
 
-    const keywordMap: Record<string, string[]> = {
-      'Development': ['api', 'docs', 'documentation', 'sdk', 'npm', 'pip', 'github', 'gitlab', 'code', 'debug', 'terminal', 'console', 'localhost', 'webpack', 'vite', 'docker', 'kubernetes', 'k8s', 'compiler', 'runtime', 'framework', 'library', 'repository', 'pull request', 'merge', 'deploy'],
-      'AI & ML': ['gpt', 'llm', 'ai', 'machine learning', 'neural', 'model', 'inference', 'training', 'transformer', 'diffusion', 'embedding', 'chatgpt', 'claude', 'gemini', 'deep learning', 'fine-tuning', 'prompt', 'dataset', 'hugging face'],
-      'Social': ['twitter', 'reddit', 'instagram', 'facebook', 'linkedin', 'mastodon', 'social', 'post', 'feed', 'timeline', 'follower', 'tweet', 'profile', 'tiktok', 'weibo', 'threads'],
-      'Shopping': ['shop', 'cart', 'checkout', 'buy', 'price', 'deal', 'sale', 'amazon', 'ebay', 'etsy', 'order', 'shipping', 'discount', 'coupon', 'store', 'product', 'add to cart', 'wishlist', 'taobao', 'aliexpress'],
-      'News': ['news', 'breaking', 'report', 'article', 'headline', 'techcrunch', 'verge', 'arstechnica', 'reuters', 'bbc', 'cnn', 'press', 'editorial', 'coverage', 'bloomberg'],
-      'Entertainment': ['video', 'watch', 'stream', 'movie', 'show', 'episode', 'youtube', 'netflix', 'twitch', 'trailer', 'season', 'binge', 'cinema', 'film'],
-      'Music': ['music', 'song', 'album', 'playlist', 'spotify', 'soundcloud', 'lyrics', 'track', 'artist', 'concert', 'audio', 'podcast'],
-      'Video': ['youtube', 'vimeo', 'video', 'clip', 'livestream', 'webinar', 'recording'],
-      'Finance': ['stock', 'crypto', 'bitcoin', 'trading', 'market', 'portfolio', 'invest', 'finance', 'wallet', 'bank', 'budget', 'tax', 'mortgage', 'loan', 'ethereum', 'nasdaq', 'dividend', 'forex'],
-      'Work': ['meeting', 'calendar', 'task', 'project', 'sprint', 'jira', 'notion', 'trello', 'asana', 'kanban', 'standup', 'roadmap', 'okr', 'deadline', 'ticket'],
-      'Communication': ['mail', 'email', 'inbox', 'message', 'chat', 'slack', 'discord', 'zoom', 'teams', 'whatsapp', 'telegram', 'gmail', 'outlook', 'compose'],
-      'Design': ['design', 'figma', 'sketch', 'prototype', 'wireframe', 'ui', 'ux', 'adobe', 'canva', 'typography', 'palette', 'mockup', 'illustrator', 'photoshop'],
-      'Research': ['paper', 'journal', 'research', 'study', 'arxiv', 'scholar', 'pubmed', 'thesis', 'citation', 'preprint', 'abstract', 'doi'],
-      'Education': ['course', 'learn', 'tutorial', 'lesson', 'academy', 'udemy', 'coursera', 'mooc', 'lecture', 'quiz', 'homework', 'exam', 'syllabus', 'khan academy'],
-      'Health': ['health', 'fitness', 'workout', 'diet', 'nutrition', 'symptom', 'doctor', 'medical', 'clinic', 'wellness', 'calories', 'webmd', 'exercise', 'meditation'],
-      'Travel': ['flight', 'hotel', 'booking', 'trip', 'travel', 'airbnb', 'itinerary', 'destination', 'expedia', 'vacation', 'airline', 'reservation', 'tripadvisor'],
-      'Gaming': ['game', 'gaming', 'steam', 'playstation', 'xbox', 'nintendo', 'twitch', 'esports', 'gameplay', 'speedrun', 'fps', 'rpg', 'minecraft'],
-    };
-
+  /** Weighted keyword scorer shared by title and URL-path classification.
+   *
+   *  Scores every category by matched-keyword weight (multi-word phrases weigh
+   *  2, single tokens 1) and returns the strongest. Ties break by
+   *  CATEGORY_PRIORITY so the outcome is deterministic and testable. `text`
+   *  must already be lowercased. */
+  private scoreText(text: string): string | null {
     let best: { category: string; score: number } | null = null;
-    for (const [category, keywords] of Object.entries(keywordMap)) {
+    for (const [category, keywords] of Object.entries(KEYWORD_MAP)) {
       let score = 0;
       for (const kw of keywords) {
-        if (matchesWord(lower, kw)) {
+        if (matchesWord(text, kw)) {
           // Multi-word phrases are far less ambiguous → weight 2; single token → 1.
           score += kw.includes(' ') ? 2 : 1;
         }
@@ -670,7 +704,6 @@ export class RuleEngine {
         best = { category, score };
       }
     }
-
     return best ? best.category : null;
   }
 
