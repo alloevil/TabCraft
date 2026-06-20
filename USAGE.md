@@ -50,8 +50,7 @@ npm run build          # 产物在 build/chrome-mv3-prod/
 
 TabCraft 的主界面是 Chrome 的**侧边栏（Side Panel）**：
 
-- 点击工具栏的 TabCraft 图标，或
-- 点击地址栏右侧的侧边栏图标，选择 TabCraft
+- **点击工具栏的 TabCraft 图标即可直接打开**（再次点击关闭）。
 
 侧边栏会停靠在浏览器右侧，列出当前窗口的所有标签页，顶部是导航栏。
 
@@ -121,7 +120,7 @@ TabCraft 的主界面是 Chrome 的**侧边栏（Side Panel）**：
 | **Hibernation Timeout**（休眠超时） | 30 分钟 | 超过此时长未访问的标签页会被休眠（可选 15/30/60/120） |
 | **AI Provider**（AI 引擎） | gemini-nano | `gemini-nano` = 本地 AI；`rule-engine` = 纯规则（更快、无需下载模型） |
 | **Theme**（主题） | system | 跟随系统 / 浅色 / 深色 |
-| **Learn From Activity**（从行为学习） | 关 | 开启后，你手动把标签页拖进某个命名分组时，TabCraft 会记住"该域名 → 该分组"，以后自动套用 |
+| **Learn From Activity**（从行为学习） | 关 | 开启后，你手动把标签页拖进某个命名分组时，TabCraft 会记住"该域名 → 该分组"，以后自动套用。开启后设置里会显示**已学习数量**，可一键 **Clear** 清空（最多保留最近 500 条，超出自动淘汰最旧的）|
 
 ---
 

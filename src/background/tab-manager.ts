@@ -77,6 +77,13 @@ export class TabManager {
     this.ruleEngine.setLearnedMappings(learned);
   }
 
+  /** Forget all learned mappings and reset the in-memory engine to match. */
+  async clearLearnedMappings(): Promise<boolean> {
+    await Storage.clearLearnedMappings();
+    this.ruleEngine.setLearnedMappings({});
+    return true;
+  }
+
   /** Decide which group bucket a tab belongs to, honoring grouping mode.
    *  Shared by smartGroupAll and autoGroupTab so both behave identically. */
   async bucketForTab(tab: chrome.tabs.Tab, mode: 'smart' | 'domain'): Promise<string> {

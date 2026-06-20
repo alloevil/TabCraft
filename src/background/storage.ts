@@ -2,7 +2,7 @@
 // Handles all data persistence via chrome.storage.local
 
 import type { StorageSchema, Settings, DomainRule, Workspace, SnoozeRecord } from '../shared/types';
-import { STORAGE_KEYS, DEFAULT_SETTINGS, MAX_UNDO_HISTORY } from '../shared/constants';
+import { STORAGE_KEYS, DEFAULT_SETTINGS, MAX_UNDO_HISTORY, MAX_LEARNED_MAPPINGS } from '../shared/constants';
 
 /** Raw storage key for undo snapshots (intentionally outside StorageSchema). */
 const UNDO_KEY = 'undoStack';
@@ -135,8 +135,29 @@ export const Storage = {
 
   async setLearnedMapping(domain: string, category: string): Promise<void> {
     const mappings = await this.getLearnedMappings();
+    // Re-insert to move this domain to the most-recently-used position
+    // (JS objects preserve string-key insertion order, so the first key is
+    // the oldest). This gives us an LRU without an extra data structure.
+    delete mappings[domain];
     mappings[domain] = category;
+    // Evict oldest entries once we exceed the cap.
+    const keys = Object.keys(mappings);
+    if (keys.length > MAX_LEARNED_MAPPINGS) {
+      for (const old of keys.slice(0, keys.length - MAX_LEARNED_MAPPINGS)) {
+        delete mappings[old];
+      }
+    }
     await set('learnedMappings', mappings);
+  },
+
+  /** Number of learned domain→category mappings currently stored. */
+  async getLearnedMappingCount(): Promise<number> {
+    return Object.keys(await this.getLearnedMappings()).length;
+  },
+
+  /** Forget all learned mappings (user-initiated reset). */
+  async clearLearnedMappings(): Promise<void> {
+    await set('learnedMappings', {});
   },
 
   // ── Session Snapshot ──────────────────────────────────────

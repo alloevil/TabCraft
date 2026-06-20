@@ -7,12 +7,27 @@ import { DEFAULT_SETTINGS, HIBERNATION_PRESETS, MIN_TABS_PRESETS } from '../../s
 export function SettingsView() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
+  const [learnedCount, setLearnedCount] = useState(0);
 
   useEffect(() => {
     chrome.storage.local.get('settings', (result) => {
       if (result.settings) setSettings(result.settings);
     });
+    refreshLearnedCount();
   }, []);
+
+  function refreshLearnedCount() {
+    chrome.runtime.sendMessage({ action: 'learnedCount' })
+      .then((n) => setLearnedCount(typeof n === 'number' ? n : 0))
+      .catch(() => {});
+  }
+
+  async function handleClearLearned() {
+    if (learnedCount === 0) return;
+    if (!confirm(`Forget all ${learnedCount} learned domain mappings?`)) return;
+    await chrome.runtime.sendMessage({ action: 'clearLearned' }).catch(() => {});
+    refreshLearnedCount();
+  }
 
   function update<K extends keyof Settings>(key: K, value: Settings[K]) {
     const next = { ...settings, [key]: value };
@@ -143,6 +158,23 @@ export function SettingsView() {
             <span className="toggle-slider"></span>
           </label>
         </div>
+
+        {settings.learnFromActivity && (
+          <div className="setting-row">
+            <div className="setting-label">
+              <span>Learned mappings</span>
+              <span className="setting-desc">{learnedCount} domain{learnedCount === 1 ? '' : 's'} remembered</span>
+            </div>
+            <button
+              className="btn btn-secondary"
+              onClick={handleClearLearned}
+              disabled={learnedCount === 0}
+              title="Forget all learned domain→group mappings"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="settings-section">
