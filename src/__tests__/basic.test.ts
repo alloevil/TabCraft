@@ -430,6 +430,72 @@ describe('learned mappings LRU', () => {
   });
 });
 
+// Test batch learned-mapping insertion (Storage.addLearnedMappings core):
+// a batch of entries applied in one pass, still respecting the LRU cap.
+describe('learned mappings batch insert', () => {
+  const MAX = 3;
+  function addBatch(
+    mappings: Record<string, string>,
+    entries: Array<{ domain: string; category: string }>
+  ): Record<string, string> {
+    for (const { domain, category } of entries) {
+      if (!domain) continue;
+      delete mappings[domain];
+      mappings[domain] = category;
+    }
+    const keys = Object.keys(mappings);
+    if (keys.length > MAX) {
+      for (const old of keys.slice(0, keys.length - MAX)) delete mappings[old];
+    }
+    return mappings;
+  }
+
+  it('applies a batch and keeps only the most recent within the cap', () => {
+    const m = addBatch({}, [
+      { domain: 'a.com', category: 'Dev' },
+      { domain: 'b.com', category: 'Social' },
+      { domain: 'c.com', category: 'News' },
+      { domain: 'd.com', category: 'Work' },
+    ]);
+    expect(Object.keys(m)).toEqual(['b.com', 'c.com', 'd.com']);
+  });
+
+  it('skips entries with an empty domain', () => {
+    const m = addBatch({}, [
+      { domain: '', category: 'Dev' },
+      { domain: 'a.com', category: 'Social' },
+    ]);
+    expect(Object.keys(m)).toEqual(['a.com']);
+  });
+});
+
+// Test the AI-feedback filter: only confident (>0.7), non-"Other" verdicts
+// become learned mappings. Mirrors the logic inside classifyAllTabs.
+describe('AI feedback filter', () => {
+  interface AiResult { category: string; confidence: number; }
+  function collectFeedback(
+    rows: Array<{ domain: string; ai: AiResult | null }>
+  ): Array<{ domain: string; category: string }> {
+    const out: Array<{ domain: string; category: string }> = [];
+    for (const { domain, ai } of rows) {
+      if (ai && ai.confidence > 0.7 && ai.category && ai.category !== 'Other' && domain) {
+        out.push({ domain, category: ai.category });
+      }
+    }
+    return out;
+  }
+
+  it('keeps only confident, non-Other verdicts', () => {
+    const fb = collectFeedback([
+      { domain: 'a.com', ai: { category: 'Finance', confidence: 0.85 } }, // keep
+      { domain: 'b.com', ai: { category: 'Other', confidence: 0.9 } },    // drop: Other
+      { domain: 'c.com', ai: { category: 'Music', confidence: 0.5 } },    // drop: low conf
+      { domain: 'd.com', ai: null },                                       // drop: no result
+    ]);
+    expect(fb).toEqual([{ domain: 'a.com', category: 'Finance' }]);
+  });
+});
+
 // Test the i18n translate() core: locale lookup, English fallback, {var} subst.
 describe('i18n translate', async () => {
   const { translate } = await import('../sidepanel/i18n');

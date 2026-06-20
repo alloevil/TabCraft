@@ -134,13 +134,21 @@ export const Storage = {
   },
 
   async setLearnedMapping(domain: string, category: string): Promise<void> {
+    await this.addLearnedMappings([{ domain, category }]);
+  },
+
+  /** Add several domain→category mappings in one storage write.
+   *  Used by AI result feedback so a batch of tabs costs one write, not N.
+   *  Same LRU semantics as setLearnedMapping: re-inserting a domain refreshes
+   *  its recency; the oldest entries are evicted past MAX_LEARNED_MAPPINGS. */
+  async addLearnedMappings(entries: Array<{ domain: string; category: string }>): Promise<void> {
+    if (entries.length === 0) return;
     const mappings = await this.getLearnedMappings();
-    // Re-insert to move this domain to the most-recently-used position
-    // (JS objects preserve string-key insertion order, so the first key is
-    // the oldest). This gives us an LRU without an extra data structure.
-    delete mappings[domain];
-    mappings[domain] = category;
-    // Evict oldest entries once we exceed the cap.
+    for (const { domain, category } of entries) {
+      if (!domain) continue;
+      delete mappings[domain];        // move to most-recently-used position
+      mappings[domain] = category;
+    }
     const keys = Object.keys(mappings);
     if (keys.length > MAX_LEARNED_MAPPINGS) {
       for (const old of keys.slice(0, keys.length - MAX_LEARNED_MAPPINGS)) {
