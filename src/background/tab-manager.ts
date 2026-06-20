@@ -133,16 +133,37 @@ export class TabManager {
     if (this.aiReady && needsAi.length > 0) {
       const batch = needsAi.map(t => ({ url: t.url || '', title: t.title || '' }));
       const aiResults = await this.aiClassifier.classifyBatch(batch);
+      // Collect confident AI verdicts to feed back as learned mappings, so the
+      // same domain skips the AI next time (faster) and classifies consistently.
+      const feedback: Array<{ domain: string; category: string }> = [];
       needsAi.forEach((tab, i) => {
         const ai = aiResults[i];
         // Only override the rule fallback when the AI is actually confident.
         if (ai && ai.confidence > 0.7 && ai.category) {
           buckets.set(tab.id!, ai.category);
+          // Don't sink "Other" into the rule base — it would poison future runs.
+          if (ai.category !== 'Other') {
+            const domain = extractDomain(tab.url || '');
+            if (domain) feedback.push({ domain, category: ai.category });
+          }
         }
       });
+      await this.learnFromAi(feedback);
     }
 
     return buckets;
+  }
+
+  /** Persist confident AI classifications as learned mappings (batched).
+   *  Gated by the same learnFromActivity setting as manual-grouping learning —
+   *  it's still automatic learning, so it honors the same opt-in. */
+  private async learnFromAi(feedback: Array<{ domain: string; category: string }>): Promise<void> {
+    if (feedback.length === 0) return;
+    const settings = await Storage.getSettings();
+    if (!settings.learnFromActivity) return;
+    await Storage.addLearnedMappings(feedback);
+    // Refresh in-memory engine so the new mappings take effect immediately.
+    this.ruleEngine.setLearnedMappings(await Storage.getLearnedMappings());
   }
 
   /** Smart group all tabs in the current window */
