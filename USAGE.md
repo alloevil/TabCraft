@@ -112,6 +112,7 @@ TabCraft 的主界面是 Chrome 的**侧边栏（Side Panel）**：
 
 | 设置 | 默认 | 说明 |
 |------|------|------|
+| **Language**（语言） | English | 界面语言，可切换 **English / 中文**，即时生效（无需重启）。当前中文已覆盖主界面框架与设置页；部分子视图文案仍在逐步翻译中 |
 | **Auto Group**（自动分组） | 开 | 新标签页打开时，若同类已有 ≥ `minTabsPerGroup` 个，自动归组 |
 | **Min Tabs Per Group**（每组最少标签数） | 2 | 少于此数不会单独成组（可选 2/3/4/5） |
 | **Grouping Mode**（分组模式） | smart | `smart` = 按主题（AI+规则）；`domain` = 仅按域名 |

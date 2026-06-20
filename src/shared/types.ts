@@ -49,6 +49,7 @@ export interface Settings {
   theme: 'system' | 'light' | 'dark';
   aiProvider: 'gemini-nano' | 'rule-engine';
   learnFromActivity: boolean;
+  language: 'en' | 'zh';
 }
 
 /** AI classification result */

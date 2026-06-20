@@ -9,6 +9,7 @@ import { RulesView } from './components/RulesView';
 import { WorkspacesView } from './components/WorkspacesView';
 import { DashboardView } from './components/DashboardView';
 import { DedupView } from './components/DedupView';
+import { LocaleProvider, translate, type Locale } from './i18n';
 
 type Tab = chrome.tabs.Tab;
 type View = 'tabs' | 'tree' | 'quick' | 'rules' | 'settings' | 'workspaces' | 'dashboard' | 'dedup';
@@ -21,10 +22,23 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const [canUndo, setCanUndo] = useState(false);
+  const [aiReady, setAiReady] = useState<boolean | null>(null);
+  const [locale, setLocale] = useState<Locale>('en');
+  const t = (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) =>
+    translate(locale, key, vars);
 
   useEffect(() => {
     loadTabs();
     chrome.runtime.sendMessage({ action: 'hasUndo' }).then(v => setCanUndo(!!v)).catch(() => {});
+    chrome.runtime.sendMessage({ action: 'isAiReady' }).then(v => setAiReady(!!v)).catch(() => setAiReady(false));
+    // Load + watch the UI language so switching it in Settings is instant.
+    chrome.storage.local.get('settings', (r) => {
+      if (r.settings?.language) setLocale(r.settings.language);
+    });
+    const onStorage = (changes: { [k: string]: chrome.storage.StorageChange }) => {
+      if (changes.settings?.newValue?.language) setLocale(changes.settings.newValue.language);
+    };
+    chrome.storage.onChanged.addListener(onStorage);
     const listener = () => loadTabs();
     chrome.tabs.onCreated.addListener(listener);
     chrome.tabs.onRemoved.addListener(listener);
@@ -41,6 +55,7 @@ export default function App() {
       chrome.tabGroups.onCreated.removeListener(listener);
       chrome.tabGroups.onUpdated.removeListener(listener);
       chrome.tabGroups.onRemoved.removeListener(listener);
+      chrome.storage.onChanged.removeListener(onStorage);
     };
   }, []);
 
@@ -129,33 +144,44 @@ export default function App() {
   }
 
   const navItems: Array<{ id: View; icon: string; label: string }> = [
-    { id: 'tabs', icon: '📑', label: 'Tabs' },
-    { id: 'tree', icon: '🌳', label: 'Tree' },
-    { id: 'quick', icon: '⚡', label: 'Quick' },
-    { id: 'dedup', icon: '🔗', label: 'Dedup' },
-    { id: 'rules', icon: '📋', label: 'Rules' },
-    { id: 'settings', icon: '⚙️', label: 'Settings' },
-    { id: 'workspaces', icon: '💼', label: 'Workspaces' },
-    { id: 'dashboard', icon: '📊', label: 'Stats' },
+    { id: 'tabs', icon: '📑', label: t('navTabs') },
+    { id: 'tree', icon: '🌳', label: t('navTree') },
+    { id: 'quick', icon: '⚡', label: t('navQuick') },
+    { id: 'dedup', icon: '🔗', label: t('navDedup') },
+    { id: 'rules', icon: '📋', label: t('navRules') },
+    { id: 'settings', icon: '⚙️', label: t('navSettings') },
+    { id: 'workspaces', icon: '💼', label: t('navWorkspaces') },
+    { id: 'dashboard', icon: '📊', label: t('navStats') },
   ];
 
   return (
+    <LocaleProvider locale={locale}>
     <div className="app">
       {/* Header */}
       <header className="header">
         <div className="header-brand">
           <span className="logo">✦</span>
           <h1>TabCraft</h1>
+          {aiReady !== null && (
+            <span
+              className={`ai-badge ${aiReady ? 'ai-on' : 'ai-off'}`}
+              title={aiReady
+                ? 'On-device AI (Gemini Nano) is active'
+                : 'AI unavailable — using the built-in rule engine'}
+            >
+              {aiReady ? t('aiActive') : t('rulesActive')}
+            </span>
+          )}
         </div>
         {view === 'tabs' && (
           <div className="header-actions">
             <button className="btn btn-primary btn-icon-label" onClick={handleSmartGroup} disabled={isLoading} title="Auto-group all tabs by topic">
               <span className="btn-icon">{isLoading ? '⏳' : '🧠'}</span>
-              <span className="btn-label">Smart Group</span>
+              <span className="btn-label">{t('smartGroup')}</span>
             </button>
             <button className="btn btn-secondary btn-icon-label" onClick={handleCloseDuplicates} disabled={isLoading} title="Close duplicate tabs">
               <span className="btn-icon">🔗</span>
-              <span className="btn-label">Dedup</span>
+              <span className="btn-label">{t('dedup')}</span>
             </button>
             {canUndo && (
               <button className="btn btn-secondary" onClick={handleUndoGrouping} disabled={isLoading} title="Undo last grouping">
@@ -177,7 +203,7 @@ export default function App() {
         <div className="search-bar">
           <input
             type="text"
-            placeholder="Search tabs..."
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="search-input"
@@ -231,5 +257,6 @@ export default function App() {
         {view === 'dedup' && <DedupView onRefresh={loadTabs} />}
       </main>
     </div>
+    </LocaleProvider>
   );
 }

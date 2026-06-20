@@ -25,6 +25,7 @@ export const DEFAULT_SETTINGS = {
   theme: 'system' as const,
   aiProvider: 'gemini-nano' as const,
   learnFromActivity: false,
+  language: 'en' as const,
 };
 
 /** Hibernation timeout presets (minutes) */
