@@ -2,7 +2,7 @@
 
 > Smart tabs, zero clutter.
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/alloevil/tabcraft/releases)
+[![Version](https://img.shields.io/badge/version-0.1.3-blue.svg)](https://github.com/alloevil/TabCraft/releases)
 [![Chrome](https://img.shields.io/badge/Chrome-120%2B-green.svg)](https://chromewebstore.google.com/detail/tabcraft)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -18,21 +18,26 @@ Most tab managers just group by domain. TabCraft understands what each tab is ac
 
 ---
 
-## Features (MVP)
+## Features
 
 | Feature | Description |
 |---------|-------------|
 | **AI Smart Grouping** | Groups tabs by topic using on-device AI (Gemini Nano) with rule-based fallback |
+| **Batch Classification** | Classifies many tabs in a single AI call, with per-tab fallback |
+| **Undo Grouping** | One-click restore of the layout before the last Smart Group |
+| **Self-Learning** | Learns domain→group mappings from your manual grouping (opt-in) |
 | **Domain Rules** | 390+ built-in rules, fully editable, import/export |
 | **Duplicate Detection** | Smart URL matching that ignores tracking parameters |
 | **Tab Hibernation** | Auto-suspend inactive tabs to save up to 95% memory |
+| **Workspaces** | Save and restore named snapshots of your tabs |
 | **Side Panel UI** | Modern glassmorphism interface with dark/light mode |
 | **100% Private** | All processing runs locally. Zero data leaves your browser |
+
+> 📖 **New here? Read the [full usage guide (使用说明) → USAGE.md](USAGE.md)** — install, every button, settings, keyboard shortcuts, and how to enable on-device AI.
 
 ### Coming Soon
 
 - Tab Snooze (close now, reopen later)
-- Auto-learning from your grouping habits
 - Multi-AI backend (Gemini Nano + Ollama + OpenAI)
 - Firefox support
 
