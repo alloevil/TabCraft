@@ -2,7 +2,17 @@
 // Handles all data persistence via chrome.storage.local
 
 import type { StorageSchema, Settings, DomainRule, Workspace, SnoozeRecord } from '../shared/types';
-import { STORAGE_KEYS, DEFAULT_SETTINGS } from '../shared/constants';
+import { STORAGE_KEYS, DEFAULT_SETTINGS, MAX_UNDO_HISTORY } from '../shared/constants';
+
+/** Raw storage key for undo snapshots (intentionally outside StorageSchema). */
+const UNDO_KEY = 'undoStack';
+
+/** A snapshot of the tab→group layout, used to undo a grouping action. */
+export interface UndoSnapshot {
+  tabs: Array<{ tabId: number; groupId: number }>;
+  groupMeta: Record<number, { title: string; color: string }>;
+  createdAt: number;
+}
 
 /** Get a value from storage */
 async function get<K extends keyof StorageSchema>(key: K): Promise<StorageSchema[K] | null> {
@@ -158,6 +168,38 @@ export const Storage = {
     stats[key] += count;
     stats.lastGroupedAt = Date.now();
     await set('stats', stats);
+  },
+
+  // ── Undo snapshots ────────────────────────────────────────
+  // Kept outside StorageSchema (raw key) so the typed get/set stay simple.
+
+  async pushUndoSnapshot(snapshot: UndoSnapshot): Promise<void> {
+    const stack = await this.getUndoStack();
+    stack.push(snapshot);
+    // Cap history depth
+    while (stack.length > MAX_UNDO_HISTORY) stack.shift();
+    await new Promise<void>((resolve) => {
+      chrome.storage.local.set({ [UNDO_KEY]: stack }, () => resolve());
+    });
+  },
+
+  async popUndoSnapshot(): Promise<UndoSnapshot | null> {
+    const stack = await this.getUndoStack();
+    const snapshot = stack.pop() ?? null;
+    await new Promise<void>((resolve) => {
+      chrome.storage.local.set({ [UNDO_KEY]: stack }, () => resolve());
+    });
+    return snapshot;
+  },
+
+  async getUndoStack(): Promise<UndoSnapshot[]> {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(UNDO_KEY, (result) => resolve(result[UNDO_KEY] ?? []));
+    });
+  },
+
+  async hasUndo(): Promise<boolean> {
+    return (await this.getUndoStack()).length > 0;
   },
 
   // ── Export / Import ───────────────────────────────────────

@@ -2,7 +2,7 @@
 // Core tab lifecycle management: grouping, deduplication, organization
 
 import type { TabInfo, TabGroup, ClassificationResult } from '../shared/types';
-import { GROUP_COLORS } from '../shared/types';
+import { colorForCategory } from '../shared/types';
 import { RuleEngine, extractDomain, getFriendlyName } from './ai/rule-engine';
 import { GeminiNanoClassifier } from './ai/gemini-nano';
 import { Storage } from './storage';
@@ -11,11 +11,6 @@ import { normalizeUrl } from './duplicate';
 /** Get all tabs in the current window */
 async function getAllTabs(): Promise<chrome.tabs.Tab[]> {
   return chrome.tabs.query({ currentWindow: true });
-}
-
-/** Assign a color to a group based on its index */
-function getColorForIndex(index: number): chrome.tabGroups.ColorEnum {
-  return GROUP_COLORS[index % GROUP_COLORS.length];
 }
 
 /**
@@ -65,10 +60,41 @@ export class TabManager {
     return this.ruleEngine.classify(url, title);
   }
 
+  /** Learn a domain→category mapping from the user's manual grouping action.
+   *  Only active when the user enabled "learn from activity". This is what makes
+   *  the rule engine improve over time instead of staying static. */
+  async learnFromManualGrouping(tab: chrome.tabs.Tab, groupTitle: string): Promise<void> {
+    const settings = await Storage.getSettings();
+    if (!settings.learnFromActivity) return;
+    if (!tab.url || !groupTitle.trim() || groupTitle === 'Other') return;
+
+    const domain = extractDomain(tab.url);
+    if (!domain) return;
+
+    await Storage.setLearnedMapping(domain, groupTitle);
+    // Refresh in-memory engine so the next classify picks it up immediately.
+    const learned = await Storage.getLearnedMappings();
+    this.ruleEngine.setLearnedMappings(learned);
+  }
+
+  /** Decide which group bucket a tab belongs to, honoring grouping mode.
+   *  Shared by smartGroupAll and autoGroupTab so both behave identically. */
+  async bucketForTab(tab: chrome.tabs.Tab, mode: 'smart' | 'domain'): Promise<string> {
+    if (mode === 'domain') {
+      const domain = extractDomain(tab.url || '');
+      return domain ? (getFriendlyName(domain) || domain) : 'Other';
+    }
+    const result = await this.classifyTab(tab);
+    return result.category;
+  }
+
   /** Smart group all tabs in the current window */
   async smartGroupAll(): Promise<{ grouped: number; groups: number }> {
     const tabs = await getAllTabs();
     const settings = await Storage.getSettings();
+
+    // Snapshot current grouping so the user can undo this action.
+    await this.saveUndoSnapshot(tabs);
 
     // Bucket tabs into groups — by category (smart) or by domain (domain mode).
     // Unclassified tabs land in an "Other" group so one click leaves nothing
@@ -76,16 +102,7 @@ export class TabManager {
     const groupTabs = new Map<string, number[]>();
     for (const tab of tabs) {
       if (!tab.url || tab.url.startsWith('chrome://') || tab.pinned) continue;
-
-      let bucket: string;
-      if (settings.groupingMode === 'domain') {
-        const domain = extractDomain(tab.url);
-        bucket = domain ? (getFriendlyName(domain) || domain) : 'Other';
-      } else {
-        const result = await this.classifyTab(tab);
-        bucket = result.category;
-      }
-
+      const bucket = await this.bucketForTab(tab, settings.groupingMode);
       const existing = groupTabs.get(bucket) || [];
       existing.push(tab.id!);
       groupTabs.set(bucket, existing);
@@ -100,29 +117,34 @@ export class TabManager {
         return 0;
       });
 
-    // Create Chrome tab groups
+    // Reuse existing same-named groups instead of always creating new ones
+    const existingGroups = await chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+
     let groupCount = 0;
+    let groupedTabCount = 0;
     for (const [name, tabIds] of validGroups) {
       try {
-        const groupId = await chrome.tabs.group({ tabIds });
-        // "Other" always grey; real groups cycle through the palette
-        const color = name === 'Other' ? 'grey' : getColorForIndex(groupCount);
+        const existing = existingGroups.find(g => g.title === name);
+        const groupId = existing
+          ? await chrome.tabs.group({ tabIds, groupId: existing.id })
+          : await chrome.tabs.group({ tabIds });
         await chrome.tabGroups.update(groupId, {
           title: name,
-          color,
+          color: colorForCategory(name),
           collapsed: false,
         });
         groupCount++;
+        groupedTabCount += tabIds.length;
       } catch (err) {
         console.error(`[TabCraft] Failed to group "${name}":`, err);
       }
     }
 
-    // Update stats
-    await Storage.incrementStat('totalGrouped', tabs.length);
+    // Stats: count tabs actually placed into groups, not the whole window
+    await Storage.incrementStat('totalGrouped', groupedTabCount);
 
     return {
-      grouped: tabs.filter(t => !t.url?.startsWith('chrome://')).length,
+      grouped: groupedTabCount,
       groups: groupCount,
     };
   }
@@ -134,37 +156,90 @@ export class TabManager {
     const settings = await Storage.getSettings();
     if (!settings.autoGroup) return;
 
-    const result = await this.classifyTab(tab);
-    if (result.category === 'Other') return;
+    const bucket = await this.bucketForTab(tab, settings.groupingMode);
 
     // Find existing group with matching name
     const groups = await chrome.tabGroups.query({ windowId: tab.windowId });
-    const existingGroup = groups.find(g => g.title === result.category);
+    const existingGroup = groups.find(g => g.title === bucket);
 
     if (existingGroup) {
       // Add to existing group
       await chrome.tabs.group({ tabIds: tab.id!, groupId: existingGroup.id });
-    } else if (settings.groupingMode === 'smart') {
-      // Check if there are enough ungrouped tabs of this category to form a new group
+    } else {
+      // No existing group — form one if enough ungrouped tabs share this bucket
       const allTabs = await getAllTabs();
-      const sameCategory = [];
+      const sameBucket = [];
       for (const t of allTabs) {
         if (t.url && !t.url.startsWith('chrome://') && !t.pinned && t.groupId === -1) {
-          const r = await this.classifyTab(t);
-          if (r.category === result.category) {
-            sameCategory.push(t.id!);
+          if (await this.bucketForTab(t, settings.groupingMode) === bucket) {
+            sameBucket.push(t.id!);
           }
         }
       }
-      if (sameCategory.length >= settings.minTabsPerGroup) {
-        const groupId = await chrome.tabs.group({ tabIds: sameCategory });
-        const color = getColorForIndex(groups.length);
+      if (sameBucket.length >= settings.minTabsPerGroup) {
+        const groupId = await chrome.tabs.group({ tabIds: sameBucket });
         await chrome.tabGroups.update(groupId, {
-          title: result.category,
-          color,
+          title: bucket,
+          color: colorForCategory(bucket),
         });
       }
     }
+  }
+
+  // ── Undo ────────────────────────────────────────────────
+
+  /** Save a snapshot of the current tab→group layout for undo. */
+  private async saveUndoSnapshot(tabs: chrome.tabs.Tab[]): Promise<void> {
+    try {
+      const groups = await chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+      const groupMeta: Record<number, { title: string; color: string }> = {};
+      for (const g of groups) groupMeta[g.id] = { title: g.title || '', color: g.color };
+      const snapshot = tabs
+        .filter(t => t.id != null)
+        .map(t => ({ tabId: t.id!, groupId: t.groupId ?? -1 }));
+      await Storage.pushUndoSnapshot({ tabs: snapshot, groupMeta, createdAt: Date.now() });
+    } catch (err) {
+      console.debug('[TabCraft] Failed to save undo snapshot:', err);
+    }
+  }
+
+  /** Undo the most recent grouping action — restore tabs to their prior groups. */
+  async undoLastGrouping(): Promise<boolean> {
+    const snapshot = await Storage.popUndoSnapshot();
+    if (!snapshot) return false;
+
+    // First, ungroup every tab in the snapshot to a clean slate.
+    const tabIds = snapshot.tabs.map(t => t.tabId);
+    try {
+      await chrome.tabs.ungroup(tabIds);
+    } catch (err) {
+      console.debug('[TabCraft] Undo ungroup failed (some tabs may be gone):', err);
+    }
+
+    // Rebuild the prior groups: collect tabs that belonged to each old group id.
+    const byGroup = new Map<number, number[]>();
+    for (const { tabId, groupId } of snapshot.tabs) {
+      if (groupId === -1) continue;
+      const arr = byGroup.get(groupId) || [];
+      arr.push(tabId);
+      byGroup.set(groupId, arr);
+    }
+
+    for (const [oldGroupId, ids] of byGroup) {
+      try {
+        const newGroupId = await chrome.tabs.group({ tabIds: ids });
+        const meta = snapshot.groupMeta[oldGroupId];
+        if (meta) {
+          await chrome.tabGroups.update(newGroupId, {
+            title: meta.title,
+            color: meta.color as chrome.tabGroups.ColorEnum,
+          });
+        }
+      } catch (err) {
+        console.debug('[TabCraft] Undo regroup failed:', err);
+      }
+    }
+    return true;
   }
 
   /** Detect and return duplicate tabs */
