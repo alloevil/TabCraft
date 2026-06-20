@@ -148,3 +148,99 @@ describe('RuleEngine classification', async () => {
     expect(ai.category).toBe('AI & ML');
   });
 });
+
+// Test colorForCategory — stable category→color mapping (imported directly,
+// the function is exported and has no runtime chrome dependency).
+describe('colorForCategory', async () => {
+  const { colorForCategory, CATEGORY_COLORS } = await import('../shared/types');
+
+  it('returns the mapped color for known categories', () => {
+    expect(colorForCategory('Development')).toBe('blue');
+    expect(colorForCategory('AI & ML')).toBe('purple');
+    expect(colorForCategory('Other')).toBe('grey');
+  });
+
+  it('is stable: same category always yields the same color', () => {
+    const first = colorForCategory('SomeCustomDomainGroup');
+    const second = colorForCategory('SomeCustomDomainGroup');
+    expect(first).toBe(second);
+  });
+
+  it('never assigns grey to an unknown (hashed) category', () => {
+    // grey is reserved for "Other"; hashed colors must avoid it
+    for (const name of ['acme.io', 'foobar', 'xyz-corp', 'my project', 'random123']) {
+      expect(colorForCategory(name)).not.toBe('grey');
+    }
+  });
+
+  it('only ever returns colors from the known palette', () => {
+    const palette = new Set(Object.values(CATEGORY_COLORS));
+    // hashed names may produce any non-grey palette color; assert it's valid
+    const valid = new Set([...palette, 'cyan', 'orange', 'pink', 'yellow', 'red', 'green', 'blue', 'purple']);
+    expect(valid.has(colorForCategory('totally-unknown-name'))).toBe(true);
+  });
+});
+
+// Test parseBatchResponse — parsing of numbered batch AI responses.
+// Inlined to match this file's convention (private fn in gemini-nano.ts).
+describe('parseBatchResponse', () => {
+  const CATEGORIES = [
+    'Development', 'Social', 'Work', 'Shopping', 'News', 'Entertainment',
+    'Finance', 'Education', 'Research', 'Reference', 'Travel', 'Health',
+    'AI & ML', 'Gaming', 'Music', 'Video', 'Design', 'Communication',
+    'Cloud & DevOps', 'Security', 'Other',
+  ] as const;
+  type CategoryName = typeof CATEGORIES[number];
+
+  function parseCategory(response: string): CategoryName | null {
+    const cleaned = response.trim().replace(/['"]/g, '');
+    if ((CATEGORIES as readonly string[]).includes(cleaned)) return cleaned as CategoryName;
+    const lower = cleaned.toLowerCase();
+    for (const cat of CATEGORIES) {
+      if (cat.toLowerCase() === lower || cat.toLowerCase().includes(lower)) {
+        return cat as CategoryName;
+      }
+    }
+    return null;
+  }
+
+  function parseBatchResponse(response: string, count: number): (CategoryName | null)[] {
+    const results: (CategoryName | null)[] = new Array(count).fill(null);
+    const lines = response.split('\n');
+    for (const line of lines) {
+      const m = line.match(/^\s*(\d+)[.)]\s*(.+)$/);
+      if (!m) continue;
+      const idx = parseInt(m[1], 10) - 1;
+      if (idx < 0 || idx >= count) continue;
+      results[idx] = parseCategory(m[2]);
+    }
+    return results;
+  }
+
+  it('parses a well-formed numbered response in order', () => {
+    const resp = '1. Development\n2. Social\n3. Shopping';
+    expect(parseBatchResponse(resp, 3)).toEqual(['Development', 'Social', 'Shopping']);
+  });
+
+  it('tolerates ")" as the number separator', () => {
+    expect(parseBatchResponse('1) News\n2) Finance', 2)).toEqual(['News', 'Finance']);
+  });
+
+  it('leaves missing indices as null', () => {
+    // only index 2 provided → indices 0 and 2 null
+    expect(parseBatchResponse('2. Work', 3)).toEqual([null, 'Work', null]);
+  });
+
+  it('ignores out-of-range indices', () => {
+    expect(parseBatchResponse('5. Work', 2)).toEqual([null, null]);
+  });
+
+  it('ignores non-numbered noise lines', () => {
+    const resp = 'Here are the categories:\n1. Development\nThanks!';
+    expect(parseBatchResponse(resp, 1)).toEqual(['Development']);
+  });
+
+  it('maps unrecognized category text to null at its index', () => {
+    expect(parseBatchResponse('1. Bogus\n2. Social', 2)).toEqual([null, 'Social']);
+  });
+});

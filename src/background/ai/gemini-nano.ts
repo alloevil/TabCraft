@@ -80,6 +80,35 @@ Title: ${title}
 Reply with ONLY the category name, nothing else. If unsure, reply "Other".`;
 }
 
+/** Build a single prompt that classifies many tabs at once — far faster than
+ *  one LLM round-trip per tab. */
+function buildBatchPrompt(tabs: Array<{ url: string; title: string }>): string {
+  const categories = CATEGORIES.join(', ');
+  const list = tabs
+    .map((t, i) => `${i + 1}. Title: ${t.title}\n   URL: ${t.url}`)
+    .join('\n');
+  return `Classify each browser tab into exactly ONE of these categories: ${categories}
+
+Tabs:
+${list}
+
+Reply with ONLY one category name per line, in the same order, numbered like "1. Development". If unsure for a tab, use "Other".`;
+}
+
+/** Parse a numbered batch response into per-index categories. */
+function parseBatchResponse(response: string, count: number): (CategoryName | null)[] {
+  const results: (CategoryName | null)[] = new Array(count).fill(null);
+  const lines = response.split('\n');
+  for (const line of lines) {
+    const m = line.match(/^\s*(\d+)[.)]\s*(.+)$/);
+    if (!m) continue;
+    const idx = parseInt(m[1], 10) - 1;
+    if (idx < 0 || idx >= count) continue;
+    results[idx] = parseCategory(m[2]);
+  }
+  return results;
+}
+
 /** Parse AI response to extract category */
 function parseCategory(response: string): CategoryName | null {
   const cleaned = response.trim().replace(/['"]/g, '');
@@ -174,14 +203,37 @@ export class GeminiNanoClassifier {
     }
   }
 
-  /** Classify multiple tabs in batch */
+  /** Classify multiple tabs in a single LLM call (falls back to per-tab on error). */
   async classifyBatch(
+    tabs: Array<{ url: string; title: string }>
+  ): Promise<ClassificationResult[]> {
+    if (!this.isReady() || !this.session || tabs.length === 0) {
+      return tabs.map(() => ({ category: 'Other', confidence: 0, source: 'ai' as const }));
+    }
+
+    try {
+      const prompt = buildBatchPrompt(tabs);
+      const response = await this.session.prompt(prompt);
+      const cats = parseBatchResponse(response, tabs.length);
+      // If parsing yielded nothing usable, fall back to per-tab classification.
+      if (cats.every(c => c === null)) {
+        return this.classifyEach(tabs);
+      }
+      return cats.map(c => c
+        ? { category: c, confidence: 0.85, source: 'ai' as const }
+        : { category: 'Other', confidence: 0.4, source: 'ai' as const });
+    } catch {
+      return this.classifyEach(tabs);
+    }
+  }
+
+  /** Per-tab classification fallback. */
+  private async classifyEach(
     tabs: Array<{ url: string; title: string }>
   ): Promise<ClassificationResult[]> {
     const results: ClassificationResult[] = [];
     for (const tab of tabs) {
-      const result = await this.classify(tab.url, tab.title);
-      results.push(result);
+      results.push(await this.classify(tab.url, tab.title));
     }
     return results;
   }

@@ -65,6 +65,21 @@ function setupListeners() {
     }
   });
 
+  // Self-learning: when the user manually moves a tab into a named group,
+  // remember that domain→group mapping so future tabs classify the same way.
+  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+    if (changeInfo.groupId === undefined || changeInfo.groupId === -1) return;
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      const group = await chrome.tabGroups.get(changeInfo.groupId);
+      if (group?.title) {
+        await tabManager.learnFromManualGrouping(tab, group.title);
+      }
+    } catch {
+      // tab/group may have been removed mid-flight; ignore
+    }
+  });
+
   // Listen for messages from side panel
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     handleMessage(message).then(sendResponse).catch(err => {
@@ -142,6 +157,12 @@ async function handleMessage(message: { action: string; [key: string]: any }) {
   switch (message.action) {
     case 'smartGroup':
       return tabManager.smartGroupAll();
+
+    case 'undoGrouping':
+      return tabManager.undoLastGrouping();
+
+    case 'hasUndo':
+      return Storage.hasUndo();
 
     case 'closeDuplicates':
       return tabManager.closeDuplicates();

@@ -20,9 +20,11 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
+  const [canUndo, setCanUndo] = useState(false);
 
   useEffect(() => {
     loadTabs();
+    chrome.runtime.sendMessage({ action: 'hasUndo' }).then(v => setCanUndo(!!v)).catch(() => {});
     const listener = () => loadTabs();
     chrome.tabs.onCreated.addListener(listener);
     chrome.tabs.onRemoved.addListener(listener);
@@ -62,8 +64,23 @@ export default function App() {
       const result = await chrome.runtime.sendMessage({ action: 'smartGroup' });
       await loadTabs();
       showStatus(`Grouped ${result?.grouped ?? 0} tabs into ${result?.groups ?? 0} groups`);
+      setCanUndo(true);
     } catch (err) {
       showStatus('Smart group failed');
+    }
+    setIsLoading(false);
+  }
+
+  async function handleUndoGrouping() {
+    setIsLoading(true);
+    try {
+      const ok = await chrome.runtime.sendMessage({ action: 'undoGrouping' });
+      await loadTabs();
+      showStatus(ok ? 'Grouping undone' : 'Nothing to undo');
+      const stillHas = await chrome.runtime.sendMessage({ action: 'hasUndo' });
+      setCanUndo(!!stillHas);
+    } catch (err) {
+      showStatus('Undo failed');
     }
     setIsLoading(false);
   }
@@ -140,6 +157,11 @@ export default function App() {
               <span className="btn-icon">🔗</span>
               <span className="btn-label">Dedup</span>
             </button>
+            {canUndo && (
+              <button className="btn btn-secondary" onClick={handleUndoGrouping} disabled={isLoading} title="Undo last grouping">
+                ↩️
+              </button>
+            )}
             <button className="btn btn-secondary" onClick={handleHibernateAll} disabled={isLoading} title="Hibernate inactive tabs">
               💤
             </button>
