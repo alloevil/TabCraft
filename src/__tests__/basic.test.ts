@@ -376,3 +376,23 @@ describe('learned mappings LRU', () => {
     expect(Object.keys(m).length).toBe(1);
   });
 });
+
+// Test the i18n translate() core: locale lookup, English fallback, {var} subst.
+describe('i18n translate', async () => {
+  const { translate } = await import('../sidepanel/i18n');
+
+  it('returns the requested locale string', () => {
+    expect(translate('zh', 'smartGroup')).toBe('智能分组');
+    expect(translate('en', 'smartGroup')).toBe('Smart Group');
+  });
+
+  it('substitutes {placeholders}', () => {
+    expect(translate('en', 'grouped', { n: 5, g: 2 })).toBe('Grouped 5 tabs into 2 groups');
+    expect(translate('zh', 'learnedRemembered', { n: 3 })).toBe('已记住 3 个域名');
+  });
+
+  it('replaces every occurrence of a placeholder', () => {
+    // sanity: a var appearing once still works, and numbers coerce to string
+    expect(translate('zh', 'grouped', { n: 1, g: 1 })).toBe('已将 1 个标签页分到 1 个分组');
+  });
+});

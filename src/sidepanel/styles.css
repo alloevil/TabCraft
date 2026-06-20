@@ -52,6 +52,12 @@
   font-size: 16px; font-weight: 700; background: linear-gradient(135deg, var(--accent), #a855f7);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
+.ai-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px;
+  white-space: nowrap; cursor: default; line-height: 1.4;
+}
+.ai-badge.ai-on { color: #a855f7; background: rgba(168, 85, 247, 0.14); }
+.ai-badge.ai-off { color: var(--text-secondary, #888); background: rgba(128, 128, 128, 0.14); }
 .header-actions { display: flex; gap: 6px; flex-shrink: 1; min-width: 0; justify-content: flex-end; }
 
 /* ── Buttons ───────────────────────────────────────────── */

@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import type { Settings } from '../../shared/types';
 import { DEFAULT_SETTINGS, HIBERNATION_PRESETS, MIN_TABS_PRESETS } from '../../shared/constants';
+import { useT } from '../i18n';
 
 export function SettingsView() {
+  const t = useT();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
   const [learnedCount, setLearnedCount] = useState(0);
@@ -81,6 +83,25 @@ export function SettingsView() {
   return (
     <div className="settings-view">
       <div className="settings-section">
+        <h3>{t('settingsTitle')}</h3>
+
+        <div className="setting-row">
+          <div className="setting-label">
+            <span>{t('language')}</span>
+            <span className="setting-desc">{t('languageDesc')}</span>
+          </div>
+          <select
+            className="setting-select"
+            value={settings.language}
+            onChange={(e) => update('language', e.target.value as Settings['language'])}
+          >
+            <option value="en">English</option>
+            <option value="zh">中文</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="settings-section">
         <h3>Grouping</h3>
 
         <div className="setting-row">
@@ -146,8 +167,8 @@ export function SettingsView() {
 
         <div className="setting-row">
           <div className="setting-label">
-            <span>Learn from activity</span>
-            <span className="setting-desc">Remember your manual group adjustments</span>
+            <span>{t('learnFromActivity')}</span>
+            <span className="setting-desc">{t('learnFromActivityDesc')}</span>
           </div>
           <label className="toggle">
             <input
@@ -162,8 +183,8 @@ export function SettingsView() {
         {settings.learnFromActivity && (
           <div className="setting-row">
             <div className="setting-label">
-              <span>Learned mappings</span>
-              <span className="setting-desc">{learnedCount} domain{learnedCount === 1 ? '' : 's'} remembered</span>
+              <span>{t('learnedMappings')}</span>
+              <span className="setting-desc">{t('learnedRemembered', { n: learnedCount })}</span>
             </div>
             <button
               className="btn btn-secondary"
@@ -171,7 +192,7 @@ export function SettingsView() {
               disabled={learnedCount === 0}
               title="Forget all learned domain→group mappings"
             >
-              Clear
+              {t('clear')}
             </button>
           </div>
         )}
