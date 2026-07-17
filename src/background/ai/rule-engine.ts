@@ -4,6 +4,7 @@
 import type { ClassificationResult, DomainRule } from '../../shared/types';
 import seedRulesData from '../../rules/seed-rules.json';
 import { RULE_CONFIDENCE } from '../../shared/constants';
+import { getDomain } from 'tldts';
 
 /** Extract domain from URL */
 export function extractDomain(url: string): string {
@@ -101,19 +102,14 @@ export function tokenizeUrlPath(url: string): string {
     .join(' ');
 }
 
-/** Normalize domain for matching (remove subdomains for common patterns) */
+/** Collapse a hostname to its registrable domain (eTLD+1) for the
+ *  normalized-domain fallback tier, e.g. mail.google.com -> google.com,
+ *  www.bbc.co.uk -> bbc.co.uk. Uses the Public Suffix List (via tldts)
+ *  instead of a hand-rolled TLD guess list, so multi-part suffixes like
+ *  .co.uk/.com.cn/.ac.jp are handled correctly instead of silently falling
+ *  through unnormalized. */
 function normalizeDomain(domain: string): string {
-  // For sites like mail.google.com -> google.com
-  const parts = domain.split('.');
-  if (parts.length > 2) {
-    // Keep last 2 parts for common TLDs
-    const commonTlds = ['com', 'org', 'net', 'io', 'dev', 'app', 'co'];
-    const tld = parts[parts.length - 1];
-    if (commonTlds.includes(tld) || domain.endsWith('.com.cn')) {
-      return parts.slice(-2).join('.');
-    }
-  }
-  return domain;
+  return getDomain(domain) ?? domain;
 }
 
 /** Friendly names for well-known domains */
@@ -159,7 +155,7 @@ export function getFriendlyName(domain: string): string | null {
  *  so the classification *logic* in this file isn't buried under a wall of
  *  ~390 static literals. IDs are derived deterministically from the domain
  *  so they stay stable across regenerations of the JSON file. */
-const DEFAULT_RULES: DomainRule[] = (seedRulesData as { domain: string; category: string }[]).map(
+const DEFAULT_RULES: DomainRule[] = (seedRulesData as { domain: string; category: string; multiPurpose?: boolean }[]).map(
   (r) => ({
     id: `seed_${r.domain}`,
     domain: r.domain,
@@ -167,6 +163,7 @@ const DEFAULT_RULES: DomainRule[] = (seedRulesData as { domain: string; category
     source: 'seed',
     createdAt: 0,
     updatedAt: 0,
+    multiPurpose: r.multiPurpose,
   })
 );
 
@@ -185,9 +182,20 @@ export class RuleEngine {
     }
   }
 
-  /** Load rules into the engine */
+  /** Load rules into the engine, replacing whatever was loaded before. */
   loadRules(rules: DomainRule[]): void {
     this.rules.clear();
+    for (const rule of rules) {
+      this.rules.set(rule.domain, rule);
+    }
+  }
+
+  /** Merge rules on top of whatever is already loaded (no clear). Used to
+   *  layer user-added custom rules over the seed set without wiping it —
+   *  loadRules() would otherwise discard all ~390 seed rules the moment a
+   *  user adds a single custom one, since Storage.getRules() only persists
+   *  custom rules, not seed ones. */
+  addRules(rules: DomainRule[]): void {
     for (const rule of rules) {
       this.rules.set(rule.domain, rule);
     }
@@ -214,11 +222,7 @@ export class RuleEngine {
     // 2. Exact domain match
     const exact = this.rules.get(domain);
     if (exact) {
-      return {
-        category: exact.category,
-        confidence: RULE_CONFIDENCE.EXACT_DOMAIN,
-        source: 'rule',
-      };
+      return this.resolveDomainMatch(exact, title, RULE_CONFIDENCE.EXACT_DOMAIN);
     }
 
     // 3. Normalized domain match
@@ -226,11 +230,7 @@ export class RuleEngine {
     if (normalized !== domain) {
       const normRule = this.rules.get(normalized);
       if (normRule) {
-        return {
-          category: normRule.category,
-          confidence: RULE_CONFIDENCE.NORMALIZED_DOMAIN,
-          source: 'rule',
-        };
+        return this.resolveDomainMatch(normRule, title, RULE_CONFIDENCE.NORMALIZED_DOMAIN);
       }
     }
 
@@ -264,6 +264,31 @@ export class RuleEngine {
       confidence: RULE_CONFIDENCE.DEFAULT_OTHER,
       source: 'fallback',
     };
+  }
+
+  /** Resolve a matched domain rule, honoring `multiPurpose`.
+   *
+   *  Ordinary domain rules return immediately at their tier confidence.
+   *  Multi-purpose domains (social feeds, UGC video, Q&A/blogging
+   *  aggregators — per-page topic varies far more than the domain implies)
+   *  instead try the tab's own TITLE keywords first; the domain's category
+   *  is only a last-resort default, tagged 'fallback' so the AI classifier
+   *  (if available) still gets a chance to weigh in instead of the domain
+   *  silently winning.
+   *
+   *  URL path tokens are deliberately NOT consulted here: on platforms like
+   *  bilibili/youtube every URL contains structural boilerplate ("video",
+   *  "watch") that would otherwise masquerade as real content signal and
+   *  just re-derive the domain's own category from the URL shape. */
+  private resolveDomainMatch(rule: DomainRule, title: string, confidence: number): ClassificationResult {
+    if (!rule.multiPurpose) {
+      return { category: rule.category, confidence, source: 'rule' };
+    }
+    const titleCategory = this.classifyByTitle(title);
+    if (titleCategory) {
+      return { category: titleCategory, confidence: RULE_CONFIDENCE.TITLE_KEYWORDS, source: 'fallback' };
+    }
+    return { category: rule.category, confidence: RULE_CONFIDENCE.TITLE_KEYWORDS, source: 'fallback' };
   }
 
   /** Title keyword analysis — delegates to the shared weighted scorer. */

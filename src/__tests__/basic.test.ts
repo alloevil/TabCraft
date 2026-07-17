@@ -115,6 +115,19 @@ describe('RuleEngine classification', async () => {
     expect(engine.classify('https://platform.openai.com/docs', 'OpenAI').category).toBe('AI & ML');
   });
 
+  it('normalizes subdomains of multi-part suffixes (.co.uk, .ac.jp) via tldts', () => {
+    // Regression test: the old hand-rolled TLD list only recognized single-
+    // label suffixes (com/org/net/io/dev/app/co), so any domain under a
+    // compound suffix like .co.uk or .ac.jp fell through unnormalized and
+    // never matched a rule registered on the registrable domain. tldts'
+    // getDomain() (backed by the Public Suffix List) handles these correctly.
+    engine.addRule('example.co.uk', 'News');
+    expect(engine.classify('https://sport.example.co.uk/', 'Sport').category).toBe('News');
+
+    engine.addRule('example.ac.jp', 'Education');
+    expect(engine.classify('https://lab.example.ac.jp/', 'Lab').category).toBe('Education');
+  });
+
   it('does NOT misclassify short keywords as substrings', () => {
     // "ai" must not match "rain"; "code" must not match "barcode"
     const rain = engine.classify('https://unknown-weather-xyz.test/', 'Rain forecast today');
@@ -163,6 +176,74 @@ describe('RuleEngine classification', async () => {
     expect(r.source).toBe('rule');
   });
 });
+
+// Test multiPurpose domain rules: social feeds / UGC video / Q&A-blogging
+// aggregators should defer to the tab's own title keywords instead of the
+// domain rule always winning (see rule-engine.ts resolveDomainMatch()).
+describe('multiPurpose domain rules', async () => {
+  const { RuleEngine } = await import('../background/ai/rule-engine');
+
+  it('title keyword hit overrides the domain rule category', () => {
+    const engine = new RuleEngine([
+      { id: 't1', domain: 'multitest.example', category: 'Entertainment', source: 'seed', createdAt: 0, updatedAt: 0, multiPurpose: true },
+    ]);
+    const r = engine.classify('https://multitest.example/post/1', 'New GPT-5 model announcement thread');
+    expect(r.category).toBe('AI & ML');
+  });
+
+  it('falls back to the domain category (tagged "fallback") when title has no keyword hit', () => {
+    const engine = new RuleEngine([
+      { id: 't1', domain: 'multitest.example', category: 'Entertainment', source: 'seed', createdAt: 0, updatedAt: 0, multiPurpose: true },
+    ]);
+    const r = engine.classify('https://multitest.example/post/1', 'Just a regular day');
+    expect(r.category).toBe('Entertainment');
+    // Tagged 'fallback' (not 'rule') specifically so the AI classifier still
+    // gets consulted downstream instead of the domain silently winning.
+    expect(r.source).toBe('fallback');
+  });
+
+  it('ignores URL path keywords — platform boilerplate like "video" must not masquerade as content signal', () => {
+    const engine = new RuleEngine([
+      { id: 't1', domain: 'multitest.example', category: 'Entertainment', source: 'seed', createdAt: 0, updatedAt: 0, multiPurpose: true },
+    ]);
+    // Path contains "video" (would score Video/Entertainment via scoreText),
+    // but title has no keyword — result must still be the domain fallback,
+    // proving path tokens are skipped for multiPurpose domains.
+    const r = engine.classify('https://multitest.example/video/12345', 'Untitled');
+    expect(r.category).toBe('Entertainment');
+    expect(r.source).toBe('fallback');
+  });
+
+  it('ordinary (non-multiPurpose) domain rules are unaffected — still win immediately', () => {
+    const engine = new RuleEngine([
+      { id: 't1', domain: 'strict.example', category: 'Work', source: 'seed', createdAt: 0, updatedAt: 0 },
+    ]);
+    const r = engine.classify('https://strict.example/', 'New GPT-5 model announcement thread');
+    expect(r.category).toBe('Work');
+    expect(r.source).toBe('rule');
+  });
+
+  it('real seed data: x.com now varies by tab content instead of always "Social"', async () => {
+    const { RuleEngine: RealEngine } = await import('../background/ai/rule-engine');
+    const engine = new RealEngine();
+    const techy = engine.classify('https://x.com/i/status/123', 'New GPT-5 model announcement thread');
+    expect(techy.category).toBe('AI & ML');
+    const generic = engine.classify('https://x.com/home', 'Home / X');
+    expect(generic.category).toBe('Social');
+  });
+
+  it('real seed data: bilibili tutorial with no ML keyword in KEYWORD_MAP still falls back to Entertainment (documented limitation, not a silent gap)', async () => {
+    const { RuleEngine: RealEngine } = await import('../background/ai/rule-engine');
+    const engine = new RealEngine();
+    const r = engine.classify(
+      'https://www.bilibili.com/video/BV1SDRxYKEfM/?p=2',
+      'Building makemore Part 2_ MLP.zh_en_哔哩哔哩_bilibili'
+    );
+    expect(r.category).toBe('Entertainment');
+    expect(r.source).toBe('fallback'); // still AI-eligible, unlike before this fix
+  });
+});
+
 
 // Test tokenizeUrlPath in isolation.
 describe('tokenizeUrlPath', async () => {

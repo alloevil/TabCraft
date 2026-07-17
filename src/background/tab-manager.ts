@@ -29,10 +29,14 @@ export class TabManager {
 
   /** Initialize the tab manager */
   async init(): Promise<void> {
-    // Load rules from storage
+    // Layer user-added custom rules on top of the ~390 seed rules the
+    // RuleEngine constructor already loaded. Storage.getRules() only ever
+    // persists custom rules (seed rules live in code, not storage), so
+    // loadRules() here would wipe every seed rule the moment a user added
+    // a single custom one — addRules() merges instead.
     const rules = await Storage.getRules();
     if (rules.length > 0) {
-      this.ruleEngine.loadRules(rules);
+      this.ruleEngine.addRules(rules);
     }
 
     // Load learned mappings
@@ -44,21 +48,41 @@ export class TabManager {
     console.log(`[TabCraft] AI ready: ${this.aiReady}`);
   }
 
-  /** Classify a single tab */
+  /** Classify a single tab.
+   *
+   *  Rule engine runs first — it's free and synchronous. A confident domain
+   *  or URL-path match (source === 'rule') is already stronger evidence
+   *  than asking a model to guess from a title, so the AI is skipped
+   *  entirely in that case. This also matches classifyAllTabs' "rules
+   *  first, AI fills the gaps" phasing and avoids an AI call on every new
+   *  tab in autoGroupTab when the domain already has a known rule.
+   *
+   *  AI is only consulted when the rule engine's own result was a weak
+   *  title-keyword guess or the "Other" default (source === 'fallback').
+   *  In that branch, a confident AI verdict wins outright; a low-confidence
+   *  AI verdict that still lands on the *same* category as the rule's weak
+   *  guess is treated as corroborating evidence (two independent uncertain
+   *  guesses agreeing is stronger than either alone) rather than discarded. */
   async classifyTab(tab: chrome.tabs.Tab): Promise<ClassificationResult> {
     const url = tab.url || '';
     const title = tab.title || '';
 
-    // Try AI first
+    const ruleResult = this.ruleEngine.classify(url, title);
+    if (ruleResult.source === 'rule') {
+      return ruleResult;
+    }
+
     if (this.aiReady) {
       const aiResult = await this.aiClassifier.classify(url, title);
       if (aiResult.confidence > AI_TRUST_THRESHOLD) {
         return aiResult;
       }
+      if (aiResult.category === ruleResult.category && ruleResult.category !== 'Other') {
+        return { ...ruleResult, confidence: Math.max(ruleResult.confidence, aiResult.confidence) };
+      }
     }
 
-    // Fallback to rule engine
-    return this.ruleEngine.classify(url, title);
+    return ruleResult;
   }
 
   /** Learn a domain→category mapping from the user's manual grouping action.
@@ -104,11 +128,17 @@ export class TabManager {
    *       hits (source === 'rule') are locked in immediately.
    *    2. Only the tabs the rules were unsure about (source === 'fallback')
    *       are sent to the AI — in a SINGLE batch call, not one per tab.
-   *  In domain mode AI is never involved. */
+   *  In domain mode AI is never involved.
+   *
+   *  `learn: false` (used by previewClassification) skips persisting AI
+   *  verdicts as learned mappings, so a read-only dry run doesn't mutate
+   *  storage. */
   async classifyAllTabs(
     tabs: chrome.tabs.Tab[],
-    mode: 'smart' | 'domain'
+    mode: 'smart' | 'domain',
+    opts: { learn?: boolean } = {}
   ): Promise<Map<number, string>> {
+    const { learn = true } = opts;
     const buckets = new Map<number, string>();
 
     if (mode === 'domain') {
@@ -149,7 +179,7 @@ export class TabManager {
           }
         }
       });
-      await this.learnFromAi(feedback);
+      if (learn) await this.learnFromAi(feedback);
     }
 
     return buckets;
@@ -165,6 +195,27 @@ export class TabManager {
     await Storage.addLearnedMappings(feedback);
     // Refresh in-memory engine so the new mappings take effect immediately.
     this.ruleEngine.setLearnedMappings(await Storage.getLearnedMappings());
+  }
+
+  /** Read-only dry run of classification against the current window's real
+   *  tabs — runs the same classifyAllTabs() pipeline smartGroupAll() uses,
+   *  but does not create/modify any tab groups or write any stats. Exists
+   *  purely to inspect classification quality against real tabs without
+   *  disturbing the user's existing tab layout. */
+  async previewClassification(): Promise<
+    Array<{ title: string; url: string; category: string }>
+  > {
+    const tabs = await getAllTabs();
+    const settings = await Storage.getSettings();
+    const groupable = tabs.filter(
+      t => t.url && !t.url.startsWith('chrome://') && !t.pinned
+    );
+    const buckets = await this.classifyAllTabs(groupable, settings.groupingMode, { learn: false });
+    return groupable.map(t => ({
+      title: t.title || '',
+      url: t.url || '',
+      category: buckets.get(t.id!) || 'Other',
+    }));
   }
 
   /** Smart group all tabs in the current window */

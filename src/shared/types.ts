@@ -36,6 +36,10 @@ export interface DomainRule {
   source: 'seed' | 'user' | 'learned';
   createdAt: number;
   updatedAt: number;
+  /** Social feeds, UGC video, Q&A/blogging aggregators — per-page topic
+   *  varies far more than the domain implies. RuleEngine defers to the
+   *  tab's own title keywords before falling back to this rule's category. */
+  multiPurpose?: boolean;
 }
 
 /** User preferences */

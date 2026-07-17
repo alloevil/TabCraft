@@ -258,6 +258,9 @@ async function handleMessage(message: { action: string; [key: string]: any }) {
     case 'domainStats':
       return tabManager.getDomainStats();
 
+    case 'previewClassification':
+      return tabManager.previewClassification();
+
     case 'isAiReady':
       return tabManager.isAiReady();
 

@@ -65,15 +65,18 @@
   },
   {
     "domain": "twitter.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "x.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "reddit.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "linkedin.com",
@@ -81,11 +84,13 @@
   },
   {
     "domain": "facebook.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "instagram.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "mastodon.social",
@@ -93,7 +98,8 @@
   },
   {
     "domain": "youtube.com",
-    "category": "Entertainment"
+    "category": "Entertainment",
+    "multiPurpose": true
   },
   {
     "domain": "netflix.com",
@@ -177,7 +183,8 @@
   },
   {
     "domain": "medium.com",
-    "category": "News"
+    "category": "News",
+    "multiPurpose": true
   },
   {
     "domain": "techcrunch.com",
@@ -549,15 +556,18 @@
   },
   {
     "domain": "threads.net",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "bsky.app",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "tiktok.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "pinterest.com",
@@ -565,11 +575,13 @@
   },
   {
     "domain": "tumblr.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "quora.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "snapchat.com",
@@ -577,11 +589,13 @@
   },
   {
     "domain": "weibo.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "zhihu.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "douban.com",
@@ -593,7 +607,8 @@
   },
   {
     "domain": "xiaohongshu.com",
-    "category": "Social"
+    "category": "Social",
+    "multiPurpose": true
   },
   {
     "domain": "okjike.com",
@@ -641,7 +656,8 @@
   },
   {
     "domain": "bilibili.com",
-    "category": "Entertainment"
+    "category": "Entertainment",
+    "multiPurpose": true
   },
   {
     "domain": "douyu.com",
