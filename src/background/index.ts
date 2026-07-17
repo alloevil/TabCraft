@@ -3,10 +3,17 @@
 import { TabManager } from './tab-manager';
 import { HibernationManager } from './hibernation';
 import { Storage } from './storage';
+import type { Settings } from '../shared/types';
+import { DUPLICATE_SCAN_DEBOUNCE_MS, SESSION_SAVE_DEBOUNCE_MS, TAB_LOAD_DELAY_MS, LEARN_DEBOUNCE_MS } from '../shared/constants';
 
 /** Singleton instances */
 let tabManager: TabManager;
 let hibernationManager: HibernationManager;
+
+/** In-memory settings cache, shared by every listener below so a burst of
+ *  tab events doesn't each round-trip through chrome.storage.local.get.
+ *  Kept in sync via chrome.storage.onChanged (see setupListeners). */
+let settingsCache: Settings;
 
 /** Initialize the extension */
 async function init() {
@@ -14,6 +21,7 @@ async function init() {
 
   // Initialize storage
   await Storage.init();
+  settingsCache = await Storage.getSettings();
 
   // Initialize tab manager
   tabManager = new TabManager();
@@ -39,37 +47,43 @@ function setupListeners() {
     ?.setPanelBehavior({ openPanelOnActionClick: true })
     .catch((err) => console.debug('[TabCraft] setPanelBehavior unsupported:', err));
 
-  // Auto-group new tabs
-  chrome.tabs.onCreated.addListener(async (tab) => {
-    const settings = await Storage.getSettings();
-    if (settings.autoGroup) {
-      // Small delay to let the tab fully load
-      setTimeout(() => {
-        tabManager.autoGroupTab(tab);
-      }, 500);
+  // Keep the in-memory settings cache in sync with storage, regardless of
+  // which code path wrote it (Storage.updateSettings or a direct
+  // chrome.storage.local.set from the side panel).
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.settings) {
+      settingsCache = changes.settings.newValue as Settings;
     }
   });
 
-  // Auto-close duplicates
-  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
-    if (changeInfo.url) {
-      const settings = await Storage.getSettings();
-      if (settings.autoCloseDuplicates) {
-        const duplicates = await tabManager.findDuplicates();
-        for (const dup of duplicates) {
-          // Sort by lastAccessed descending — most recent first
-          const sorted = dup.tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
-          // Keep the most recently active tab, close the rest
-          const toClose = sorted.slice(1);
-          for (const tab of toClose) {
-            if (tab.id === tabId) {
-              // Don't close the tab that was just updated
-              continue;
-            }
-            await chrome.tabs.remove(tab.id!);
-          }
-        }
-      }
+  // Auto-group new tabs
+  chrome.tabs.onCreated.addListener((tab) => {
+    if (settingsCache.autoGroup && tab.id !== undefined) {
+      // Small delay to let the tab fully load
+      const timer = setTimeout(() => {
+        pendingAutoGroupTimers.delete(tab.id!);
+        tabManager.autoGroupTab(tab);
+      }, TAB_LOAD_DELAY_MS);
+      pendingAutoGroupTimers.set(tab.id, timer);
+    }
+  });
+
+  // Cancel a pending auto-group if the tab closes before the delay fires —
+  // otherwise autoGroupTab runs against an already-closed tab id.
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    const timer = pendingAutoGroupTimers.get(tabId);
+    if (timer) {
+      clearTimeout(timer);
+      pendingAutoGroupTimers.delete(tabId);
+    }
+  });
+
+  // Auto-close duplicates — debounced so a burst of URL changes (SPA
+  // navigations, session restore) triggers one full-tab-list scan instead
+  // of one scan per tab per navigation.
+  chrome.tabs.onUpdated.addListener((_tabId, changeInfo) => {
+    if (changeInfo.url && settingsCache.autoCloseDuplicates) {
+      scheduleDuplicateScan();
     }
   });
 
@@ -94,11 +108,11 @@ function setupListeners() {
       } catch {
         // tab/group may have been removed mid-flight; ignore
       }
-    }, 600));
+    }, LEARN_DEBOUNCE_MS));
   });
 
   // Listen for messages from side panel
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     handleMessage(message).then(sendResponse).catch(err => {
       console.error('[TabCraft] Message handler error:', err);
       sendResponse({ error: err.message });
@@ -106,22 +120,26 @@ function setupListeners() {
     return true; // Keep the message channel open for async response
   });
 
-  // Context menu
+  // Context menu — onInstalled also fires on extension update, so clear any
+  // previously-registered items first; otherwise chrome.contextMenus.create
+  // rejects with a "duplicate id" error on every update.
   chrome.runtime.onInstalled.addListener(() => {
-    chrome.contextMenus.create({
-      id: 'tabcraft-smart-group',
-      title: 'TabCraft: Smart Group All Tabs',
-      contexts: ['page'],
-    });
-    chrome.contextMenus.create({
-      id: 'tabcraft-dedup',
-      title: 'TabCraft: Close Duplicates',
-      contexts: ['page'],
-    });
-    chrome.contextMenus.create({
-      id: 'tabcraft-hibernate',
-      title: 'TabCraft: Hibernate Inactive Tabs',
-      contexts: ['page'],
+    chrome.contextMenus.removeAll(() => {
+      chrome.contextMenus.create({
+        id: 'tabcraft-smart-group',
+        title: 'TabCraft: Smart Group All Tabs',
+        contexts: ['page'],
+      });
+      chrome.contextMenus.create({
+        id: 'tabcraft-dedup',
+        title: 'TabCraft: Close Duplicates',
+        contexts: ['page'],
+      });
+      chrome.contextMenus.create({
+        id: 'tabcraft-hibernate',
+        title: 'TabCraft: Hibernate Inactive Tabs',
+        contexts: ['page'],
+      });
     });
   });
 
@@ -163,10 +181,51 @@ function setupListeners() {
     }
   });
 
-  // Save session on tab changes
-  chrome.tabs.onCreated.addListener(() => saveSession());
-  chrome.tabs.onRemoved.addListener(() => saveSession());
-  chrome.tabs.onMoved.addListener(() => saveSession());
+  // Save session on tab changes — debounced so closing/opening/dragging a
+  // batch of tabs collapses into one snapshot write instead of one per event.
+  chrome.tabs.onCreated.addListener(() => scheduleSessionSave());
+  chrome.tabs.onRemoved.addListener(() => scheduleSessionSave());
+  chrome.tabs.onMoved.addListener(() => scheduleSessionSave());
+}
+
+/** Pending auto-group setTimeout handles, keyed by tab id, so they can be
+ *  cancelled if the tab closes before the load delay elapses. */
+const pendingAutoGroupTimers = new Map<number, ReturnType<typeof setTimeout>>();
+
+/** Debounced duplicate scan — coalesces a burst of onUpdated(url) events
+ *  (SPA navigations, session restore) into a single findDuplicates() pass. */
+let duplicateScanTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleDuplicateScan() {
+  if (duplicateScanTimer) clearTimeout(duplicateScanTimer);
+  duplicateScanTimer = setTimeout(async () => {
+    duplicateScanTimer = null;
+    const duplicates = await tabManager.findDuplicates();
+    const activeTabIds = new Set(
+      (await chrome.tabs.query({ active: true })).map((t) => t.id)
+    );
+    for (const dup of duplicates) {
+      // Sort by lastAccessed descending — most recent first
+      const sorted = dup.tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+      // Keep the most recently active tab, close the rest — but never close
+      // a tab that's currently focused in some window.
+      const toClose = sorted.slice(1).filter((tab) => !activeTabIds.has(tab.id));
+      for (const tab of toClose) {
+        await chrome.tabs.remove(tab.id!);
+      }
+    }
+  }, DUPLICATE_SCAN_DEBOUNCE_MS);
+}
+
+/** Debounced session save, used by the high-frequency tab-mutation
+ *  listeners. The 5-minute alarm above calls saveSession() directly since
+ *  it's already infrequent. */
+let sessionSaveTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleSessionSave() {
+  if (sessionSaveTimer) clearTimeout(sessionSaveTimer);
+  sessionSaveTimer = setTimeout(() => {
+    sessionSaveTimer = null;
+    saveSession();
+  }, SESSION_SAVE_DEBOUNCE_MS);
 }
 
 /** Handle messages from the side panel */

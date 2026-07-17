@@ -3,6 +3,8 @@
 // Uses chrome.alarms for MV3 reliability + chrome.storage for state persistence
 
 import { Storage } from './storage';
+import { LAST_ACCESS_FLUSH_DEBOUNCE_MS } from '../shared/constants';
+import { formatMemoryEstimate } from '../shared/format';
 
 const LAST_ACCESS_KEY = 'hibernation_lastAccess';
 
@@ -22,49 +24,77 @@ function shouldExclude(tab: chrome.tabs.Tab): boolean {
  * Uses chrome.storage.local for lastAccessMap persistence
  */
 export class HibernationManager {
+  /** In-memory mirror of the last-access map. Tab-activity events mutate
+   *  this directly instead of doing a full storage read-modify-write on
+   *  every activation/navigation; writes are flushed to storage on a
+   *  trailing debounce (see scheduleFlush). */
+  private lastAccessCache: Record<number, number> | null = null;
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+
   /** Start monitoring tab activity */
   start(): void {
-    // Track tab activation — persist to storage
-    chrome.tabs.onActivated.addListener(async (activeInfo) => {
-      await this.updateLastAccess(activeInfo.tabId);
+    // Track tab activation
+    chrome.tabs.onActivated.addListener((activeInfo) => {
+      this.updateLastAccess(activeInfo.tabId);
     });
 
     // Track tab updates
-    chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
       if (changeInfo.status === 'complete') {
-        await this.updateLastAccess(tabId);
+        this.updateLastAccess(tabId);
       }
     });
 
     // Remove closed tabs from tracking
-    chrome.tabs.onRemoved.addListener(async (tabId) => {
-      await this.removeLastAccess(tabId);
+    chrome.tabs.onRemoved.addListener((tabId) => {
+      this.removeLastAccess(tabId);
     });
 
     // Periodic check is handled by chrome.alarms in index.ts
   }
 
+  /** Lazily load the last-access map into memory (once per service-worker
+   *  lifetime — MV3 workers are recreated often, so this still runs
+   *  regularly, but no longer once per tab event). */
+  private async ensureCacheLoaded(): Promise<Record<number, number>> {
+    if (!this.lastAccessCache) {
+      this.lastAccessCache = await new Promise((resolve) => {
+        chrome.storage.local.get(LAST_ACCESS_KEY, (result) => {
+          resolve(result[LAST_ACCESS_KEY] || {});
+        });
+      });
+    }
+    return this.lastAccessCache!;
+  }
+
+  /** Debounced flush of the in-memory cache to storage. */
+  private scheduleFlush(): void {
+    if (this.flushTimer) return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = null;
+      if (this.lastAccessCache) {
+        chrome.storage.local.set({ [LAST_ACCESS_KEY]: this.lastAccessCache });
+      }
+    }, LAST_ACCESS_FLUSH_DEBOUNCE_MS);
+  }
+
   /** Update last access time for a tab */
   private async updateLastAccess(tabId: number): Promise<void> {
-    const data = await this.getLastAccessMap();
+    const data = await this.ensureCacheLoaded();
     data[tabId] = Date.now();
-    await chrome.storage.local.set({ [LAST_ACCESS_KEY]: data });
+    this.scheduleFlush();
   }
 
   /** Remove a tab from last access tracking */
   private async removeLastAccess(tabId: number): Promise<void> {
-    const data = await this.getLastAccessMap();
+    const data = await this.ensureCacheLoaded();
     delete data[tabId];
-    await chrome.storage.local.set({ [LAST_ACCESS_KEY]: data });
+    this.scheduleFlush();
   }
 
-  /** Get the last access map from storage */
+  /** Get the last access map, loading it from storage on first use. */
   private async getLastAccessMap(): Promise<Record<number, number>> {
-    return new Promise((resolve) => {
-      chrome.storage.local.get(LAST_ACCESS_KEY, (result) => {
-        resolve(result[LAST_ACCESS_KEY] || {});
-      });
-    });
+    return this.ensureCacheLoaded();
   }
 
   /** Check all tabs and hibernate inactive ones */
@@ -123,12 +153,9 @@ export class HibernationManager {
     const hibernated = tabs.filter(t => t.discarded).length;
     const total = tabs.length;
 
-    // Note: actual memory savings vary by tab content
-    // This is a rough estimate for display purposes only
-    const estimatedSavedMB = hibernated * 50; // ~50MB per tab is a common estimate
-    const memorySaved = estimatedSavedMB > 1024
-      ? `~${(estimatedSavedMB / 1024).toFixed(1)} GB`
-      : `~${estimatedSavedMB} MB`;
+    // Note: actual memory savings vary by tab content — this is a rough
+    // estimate for display purposes only (see ESTIMATED_MB_PER_TAB).
+    const memorySaved = formatMemoryEstimate(hibernated);
 
     return { hibernated, total, memorySaved };
   }

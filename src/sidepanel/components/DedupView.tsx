@@ -1,6 +1,7 @@
 // TabCraft — Cross-Window Duplicate Detection & Merge
 
 import React, { useState, useEffect } from 'react';
+import { normalizeUrl } from '../../background/duplicate';
 
 interface DuplicateGroup {
   normalizedUrl: string;
@@ -282,24 +283,6 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
   );
 }
 
-function normalizeUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    // Remove tracking params
-    const params = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
-      'fbclid', 'gclid', 'msclkid', 'ref', '_ga', '_gl', 'yclid', 'si', 'feature', 'app'];
-    for (const p of params) u.searchParams.delete(p);
-    // Remove www.
-    u.hostname = u.hostname.replace(/^www\./, '');
-    // Remove hash
-    u.hash = '';
-    // Remove trailing slash
-    const path = u.pathname.replace(/\/$/, '') || '/';
-    return u.origin + path + u.search;
-  } catch {
-    return url;
-  }
-}
 
 function getCleanDomain(url: string): string {
   try {

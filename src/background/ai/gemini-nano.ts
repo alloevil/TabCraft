@@ -4,6 +4,7 @@
 
 import type { ClassificationResult, CategoryName } from '../../shared/types';
 import { CATEGORIES } from '../../shared/types';
+import { AI_CONFIDENCE } from '../../shared/constants';
 
 /** Experimental AI API types (not yet in TypeScript definitions) */
 interface LanguageModelCapabilities {
@@ -197,14 +198,14 @@ export class GeminiNanoClassifier {
       if (category) {
         return {
           category,
-          confidence: 0.85,
+          confidence: AI_CONFIDENCE.SUCCESS,
           source: 'ai',
         };
       }
 
       return {
         category: 'Other',
-        confidence: 0.4,
+        confidence: AI_CONFIDENCE.LOW,
         source: 'ai',
       };
     } catch {
@@ -233,8 +234,8 @@ export class GeminiNanoClassifier {
         return this.classifyEach(tabs);
       }
       return cats.map(c => c
-        ? { category: c, confidence: 0.85, source: 'ai' as const }
-        : { category: 'Other', confidence: 0.4, source: 'ai' as const });
+        ? { category: c, confidence: AI_CONFIDENCE.SUCCESS, source: 'ai' as const }
+        : { category: 'Other', confidence: AI_CONFIDENCE.LOW, source: 'ai' as const });
     } catch {
       return this.classifyEach(tabs);
     }

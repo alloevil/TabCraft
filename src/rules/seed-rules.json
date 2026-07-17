@@ -1,91 +1,1562 @@
 [
-  {"domain": "github.com", "category": "Development"},
-  {"domain": "gitlab.com", "category": "Development"},
-  {"domain": "stackoverflow.com", "category": "Development"},
-  {"domain": "developer.mozilla.org", "category": "Development"},
-  {"domain": "npmjs.com", "category": "Development"},
-  {"domain": "vercel.com", "category": "Development"},
-  {"domain": "netlify.com", "category": "Development"},
-  {"domain": "codepen.io", "category": "Development"},
-  {"domain": "codesandbox.io", "category": "Development"},
-  {"domain": "docker.com", "category": "Development"},
-  {"domain": "kubernetes.io", "category": "Development"},
-  {"domain": "aws.amazon.com", "category": "Cloud & DevOps"},
-  {"domain": "console.cloud.google.com", "category": "Cloud & DevOps"},
-  {"domain": "portal.azure.com", "category": "Cloud & DevOps"},
-  {"domain": "digitalocean.com", "category": "Cloud & DevOps"},
-  {"domain": "heroku.com", "category": "Cloud & DevOps"},
-  {"domain": "chat.openai.com", "category": "AI & ML"},
-  {"domain": "claude.ai", "category": "AI & ML"},
-  {"domain": "huggingface.co", "category": "AI & ML"},
-  {"domain": "kaggle.com", "category": "AI & ML"},
-  {"domain": "colab.research.google.com", "category": "AI & ML"},
-  {"domain": "tensorflow.org", "category": "AI & ML"},
-  {"domain": "pytorch.org", "category": "AI & ML"},
-  {"domain": "arxiv.org", "category": "Research"},
-  {"domain": "scholar.google.com", "category": "Research"},
-  {"domain": "semanticscholar.org", "category": "Research"},
-  {"domain": "twitter.com", "category": "Social"},
-  {"domain": "x.com", "category": "Social"},
-  {"domain": "reddit.com", "category": "Social"},
-  {"domain": "linkedin.com", "category": "Social"},
-  {"domain": "facebook.com", "category": "Social"},
-  {"domain": "instagram.com", "category": "Social"},
-  {"domain": "mastodon.social", "category": "Social"},
-  {"domain": "threads.net", "category": "Social"},
-  {"domain": "youtube.com", "category": "Entertainment"},
-  {"domain": "netflix.com", "category": "Entertainment"},
-  {"domain": "twitch.tv", "category": "Entertainment"},
-  {"domain": "disneyplus.com", "category": "Entertainment"},
-  {"domain": "hbomax.com", "category": "Entertainment"},
-  {"domain": "spotify.com", "category": "Music"},
-  {"domain": "music.apple.com", "category": "Music"},
-  {"domain": "soundcloud.com", "category": "Music"},
-  {"domain": "notion.so", "category": "Work"},
-  {"domain": "figma.com", "category": "Design"},
-  {"domain": "canva.com", "category": "Design"},
-  {"domain": "slack.com", "category": "Communication"},
-  {"domain": "discord.com", "category": "Communication"},
-  {"domain": "zoom.us", "category": "Communication"},
-  {"domain": "teams.microsoft.com", "category": "Communication"},
-  {"domain": "mail.google.com", "category": "Communication"},
-  {"domain": "outlook.live.com", "category": "Communication"},
-  {"domain": "trello.com", "category": "Work"},
-  {"domain": "asana.com", "category": "Work"},
-  {"domain": "jira.atlassian.com", "category": "Work"},
-  {"domain": "monday.com", "category": "Work"},
-  {"domain": "docs.google.com", "category": "Work"},
-  {"domain": "sheets.google.com", "category": "Work"},
-  {"domain": "drive.google.com", "category": "Work"},
-  {"domain": "calendar.google.com", "category": "Work"},
-  {"domain": "amazon.com", "category": "Shopping"},
-  {"domain": "ebay.com", "category": "Shopping"},
-  {"domain": "etsy.com", "category": "Shopping"},
-  {"domain": "walmart.com", "category": "Shopping"},
-  {"domain": "news.ycombinator.com", "category": "News"},
-  {"domain": "medium.com", "category": "News"},
-  {"domain": "techcrunch.com", "category": "News"},
-  {"domain": "theverge.com", "category": "News"},
-  {"domain": "arstechnica.com", "category": "News"},
-  {"domain": "wired.com", "category": "News"},
-  {"domain": "finance.yahoo.com", "category": "Finance"},
-  {"domain": "bloomberg.com", "category": "Finance"},
-  {"domain": "coinmarketcap.com", "category": "Finance"},
-  {"domain": "investing.com", "category": "Finance"},
-  {"domain": "udemy.com", "category": "Education"},
-  {"domain": "coursera.org", "category": "Education"},
-  {"domain": "edx.org", "category": "Education"},
-  {"domain": "khanacademy.org", "category": "Education"},
-  {"domain": "duolingo.com", "category": "Education"},
-  {"domain": "translate.google.com", "category": "Reference"},
-  {"domain": "wikipedia.org", "category": "Reference"},
-  {"domain": "dictionary.com", "category": "Reference"},
-  {"domain": "deepl.com", "category": "Reference"},
-  {"domain": "booking.com", "category": "Travel"},
-  {"domain": "airbnb.com", "category": "Travel"},
-  {"domain": "tripadvisor.com", "category": "Travel"},
-  {"domain": "google.com/maps", "category": "Travel"},
-  {"domain": "webmd.com", "category": "Health"},
-  {"domain": "mayoclinic.org", "category": "Health"},
-  {"domain": "reddit.com/r/fitness", "category": "Health"}
+  {
+    "domain": "github.com",
+    "category": "Development"
+  },
+  {
+    "domain": "gitlab.com",
+    "category": "Development"
+  },
+  {
+    "domain": "stackoverflow.com",
+    "category": "Development"
+  },
+  {
+    "domain": "developer.mozilla.org",
+    "category": "Development"
+  },
+  {
+    "domain": "npmjs.com",
+    "category": "Development"
+  },
+  {
+    "domain": "vercel.com",
+    "category": "Development"
+  },
+  {
+    "domain": "netlify.com",
+    "category": "Development"
+  },
+  {
+    "domain": "codepen.io",
+    "category": "Development"
+  },
+  {
+    "domain": "codesandbox.io",
+    "category": "Development"
+  },
+  {
+    "domain": "docker.com",
+    "category": "Development"
+  },
+  {
+    "domain": "chat.openai.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "claude.ai",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "huggingface.co",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "arxiv.org",
+    "category": "Research"
+  },
+  {
+    "domain": "kaggle.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "colab.research.google.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "twitter.com",
+    "category": "Social"
+  },
+  {
+    "domain": "x.com",
+    "category": "Social"
+  },
+  {
+    "domain": "reddit.com",
+    "category": "Social"
+  },
+  {
+    "domain": "linkedin.com",
+    "category": "Social"
+  },
+  {
+    "domain": "facebook.com",
+    "category": "Social"
+  },
+  {
+    "domain": "instagram.com",
+    "category": "Social"
+  },
+  {
+    "domain": "mastodon.social",
+    "category": "Social"
+  },
+  {
+    "domain": "youtube.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "netflix.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "twitch.tv",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "spotify.com",
+    "category": "Music"
+  },
+  {
+    "domain": "notion.so",
+    "category": "Work"
+  },
+  {
+    "domain": "figma.com",
+    "category": "Design"
+  },
+  {
+    "domain": "slack.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "discord.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "zoom.us",
+    "category": "Communication"
+  },
+  {
+    "domain": "trello.com",
+    "category": "Work"
+  },
+  {
+    "domain": "asana.com",
+    "category": "Work"
+  },
+  {
+    "domain": "jira.atlassian.com",
+    "category": "Work"
+  },
+  {
+    "domain": "docs.google.com",
+    "category": "Work"
+  },
+  {
+    "domain": "sheets.google.com",
+    "category": "Work"
+  },
+  {
+    "domain": "drive.google.com",
+    "category": "Work"
+  },
+  {
+    "domain": "mail.google.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "calendar.google.com",
+    "category": "Work"
+  },
+  {
+    "domain": "amazon.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "ebay.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "etsy.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "news.ycombinator.com",
+    "category": "News"
+  },
+  {
+    "domain": "medium.com",
+    "category": "News"
+  },
+  {
+    "domain": "techcrunch.com",
+    "category": "News"
+  },
+  {
+    "domain": "theverge.com",
+    "category": "News"
+  },
+  {
+    "domain": "finance.yahoo.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "bloomberg.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "coinmarketcap.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "aws.amazon.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "console.cloud.google.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "portal.azure.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "bitbucket.org",
+    "category": "Development"
+  },
+  {
+    "domain": "pypi.org",
+    "category": "Development"
+  },
+  {
+    "domain": "rubygems.org",
+    "category": "Development"
+  },
+  {
+    "domain": "packagist.org",
+    "category": "Development"
+  },
+  {
+    "domain": "crates.io",
+    "category": "Development"
+  },
+  {
+    "domain": "readthedocs.io",
+    "category": "Development"
+  },
+  {
+    "domain": "devdocs.io",
+    "category": "Development"
+  },
+  {
+    "domain": "caniuse.com",
+    "category": "Development"
+  },
+  {
+    "domain": "jsfiddle.net",
+    "category": "Development"
+  },
+  {
+    "domain": "replit.com",
+    "category": "Development"
+  },
+  {
+    "domain": "glitch.com",
+    "category": "Development"
+  },
+  {
+    "domain": "stackblitz.com",
+    "category": "Development"
+  },
+  {
+    "domain": "regex101.com",
+    "category": "Development"
+  },
+  {
+    "domain": "postman.com",
+    "category": "Development"
+  },
+  {
+    "domain": "insomnia.rest",
+    "category": "Development"
+  },
+  {
+    "domain": "swagger.io",
+    "category": "Development"
+  },
+  {
+    "domain": "jsonplaceholder.typicode.com",
+    "category": "Development"
+  },
+  {
+    "domain": "leetcode.com",
+    "category": "Development"
+  },
+  {
+    "domain": "hackerrank.com",
+    "category": "Development"
+  },
+  {
+    "domain": "codewars.com",
+    "category": "Development"
+  },
+  {
+    "domain": "exercism.org",
+    "category": "Development"
+  },
+  {
+    "domain": "geeksforgeeks.org",
+    "category": "Development"
+  },
+  {
+    "domain": "w3schools.com",
+    "category": "Development"
+  },
+  {
+    "domain": "tutorialspoint.com",
+    "category": "Development"
+  },
+  {
+    "domain": "freecodecamp.org",
+    "category": "Development"
+  },
+  {
+    "domain": "dev.to",
+    "category": "Development"
+  },
+  {
+    "domain": "hashnode.com",
+    "category": "Development"
+  },
+  {
+    "domain": "css-tricks.com",
+    "category": "Development"
+  },
+  {
+    "domain": "smashingmagazine.com",
+    "category": "Development"
+  },
+  {
+    "domain": "raw.githubusercontent.com",
+    "category": "Development"
+  },
+  {
+    "domain": "gist.github.com",
+    "category": "Development"
+  },
+  {
+    "domain": "sourceforge.net",
+    "category": "Development"
+  },
+  {
+    "domain": "apache.org",
+    "category": "Development"
+  },
+  {
+    "domain": "kernel.org",
+    "category": "Development"
+  },
+  {
+    "domain": "rust-lang.org",
+    "category": "Development"
+  },
+  {
+    "domain": "go.dev",
+    "category": "Development"
+  },
+  {
+    "domain": "python.org",
+    "category": "Development"
+  },
+  {
+    "domain": "nodejs.org",
+    "category": "Development"
+  },
+  {
+    "domain": "reactjs.org",
+    "category": "Development"
+  },
+  {
+    "domain": "react.dev",
+    "category": "Development"
+  },
+  {
+    "domain": "vuejs.org",
+    "category": "Development"
+  },
+  {
+    "domain": "angular.io",
+    "category": "Development"
+  },
+  {
+    "domain": "svelte.dev",
+    "category": "Development"
+  },
+  {
+    "domain": "tailwindcss.com",
+    "category": "Development"
+  },
+  {
+    "domain": "getbootstrap.com",
+    "category": "Development"
+  },
+  {
+    "domain": "webpack.js.org",
+    "category": "Development"
+  },
+  {
+    "domain": "vitejs.dev",
+    "category": "Development"
+  },
+  {
+    "domain": "eslint.org",
+    "category": "Development"
+  },
+  {
+    "domain": "prettier.io",
+    "category": "Development"
+  },
+  {
+    "domain": "juejin.cn",
+    "category": "Development"
+  },
+  {
+    "domain": "csdn.net",
+    "category": "Development"
+  },
+  {
+    "domain": "cnblogs.com",
+    "category": "Development"
+  },
+  {
+    "domain": "segmentfault.com",
+    "category": "Development"
+  },
+  {
+    "domain": "oschina.net",
+    "category": "Development"
+  },
+  {
+    "domain": "gitee.com",
+    "category": "Development"
+  },
+  {
+    "domain": "v2ex.com",
+    "category": "Development"
+  },
+  {
+    "domain": "openai.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "platform.openai.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "anthropic.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "console.anthropic.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "gemini.google.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "bard.google.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "perplexity.ai",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "poe.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "midjourney.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "stability.ai",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "replicate.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "runwayml.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "civitai.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "pytorch.org",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "tensorflow.org",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "wandb.ai",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "paperswithcode.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "ollama.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "langchain.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "pinecone.io",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "cohere.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "mistral.ai",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "together.ai",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "groq.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "modelscope.cn",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "deepseek.com",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "moonshot.cn",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "zhipuai.cn",
+    "category": "AI & ML"
+  },
+  {
+    "domain": "threads.net",
+    "category": "Social"
+  },
+  {
+    "domain": "bsky.app",
+    "category": "Social"
+  },
+  {
+    "domain": "tiktok.com",
+    "category": "Social"
+  },
+  {
+    "domain": "pinterest.com",
+    "category": "Social"
+  },
+  {
+    "domain": "tumblr.com",
+    "category": "Social"
+  },
+  {
+    "domain": "quora.com",
+    "category": "Social"
+  },
+  {
+    "domain": "snapchat.com",
+    "category": "Social"
+  },
+  {
+    "domain": "weibo.com",
+    "category": "Social"
+  },
+  {
+    "domain": "zhihu.com",
+    "category": "Social"
+  },
+  {
+    "domain": "douban.com",
+    "category": "Social"
+  },
+  {
+    "domain": "tieba.baidu.com",
+    "category": "Social"
+  },
+  {
+    "domain": "xiaohongshu.com",
+    "category": "Social"
+  },
+  {
+    "domain": "okjike.com",
+    "category": "Social"
+  },
+  {
+    "domain": "primevideo.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "hulu.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "disneyplus.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "hbomax.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "max.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "vimeo.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "dailymotion.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "iqiyi.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "youku.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "v.qq.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "bilibili.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "douyu.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "huya.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "mgtv.com",
+    "category": "Entertainment"
+  },
+  {
+    "domain": "music.apple.com",
+    "category": "Music"
+  },
+  {
+    "domain": "soundcloud.com",
+    "category": "Music"
+  },
+  {
+    "domain": "tidal.com",
+    "category": "Music"
+  },
+  {
+    "domain": "bandcamp.com",
+    "category": "Music"
+  },
+  {
+    "domain": "pandora.com",
+    "category": "Music"
+  },
+  {
+    "domain": "music.youtube.com",
+    "category": "Music"
+  },
+  {
+    "domain": "music.163.com",
+    "category": "Music"
+  },
+  {
+    "domain": "y.qq.com",
+    "category": "Music"
+  },
+  {
+    "domain": "kugou.com",
+    "category": "Music"
+  },
+  {
+    "domain": "kuwo.cn",
+    "category": "Music"
+  },
+  {
+    "domain": "music.amazon.com",
+    "category": "Video"
+  },
+  {
+    "domain": "atlassian.net",
+    "category": "Work"
+  },
+  {
+    "domain": "confluence.atlassian.com",
+    "category": "Work"
+  },
+  {
+    "domain": "monday.com",
+    "category": "Work"
+  },
+  {
+    "domain": "clickup.com",
+    "category": "Work"
+  },
+  {
+    "domain": "airtable.com",
+    "category": "Work"
+  },
+  {
+    "domain": "basecamp.com",
+    "category": "Work"
+  },
+  {
+    "domain": "linear.app",
+    "category": "Work"
+  },
+  {
+    "domain": "height.app",
+    "category": "Work"
+  },
+  {
+    "domain": "coda.io",
+    "category": "Work"
+  },
+  {
+    "domain": "miro.com",
+    "category": "Work"
+  },
+  {
+    "domain": "mural.co",
+    "category": "Work"
+  },
+  {
+    "domain": "lucidchart.com",
+    "category": "Work"
+  },
+  {
+    "domain": "smartsheet.com",
+    "category": "Work"
+  },
+  {
+    "domain": "tower.im",
+    "category": "Work"
+  },
+  {
+    "domain": "teambition.com",
+    "category": "Work"
+  },
+  {
+    "domain": "feishu.cn",
+    "category": "Work"
+  },
+  {
+    "domain": "larksuite.com",
+    "category": "Work"
+  },
+  {
+    "domain": "yuque.com",
+    "category": "Work"
+  },
+  {
+    "domain": "worktile.com",
+    "category": "Work"
+  },
+  {
+    "domain": "outlook.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "outlook.office.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "outlook.live.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "proton.me",
+    "category": "Communication"
+  },
+  {
+    "domain": "protonmail.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "tutanota.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "messenger.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "telegram.org",
+    "category": "Communication"
+  },
+  {
+    "domain": "web.telegram.org",
+    "category": "Communication"
+  },
+  {
+    "domain": "web.whatsapp.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "teams.microsoft.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "meet.google.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "webex.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "mail.qq.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "mail.163.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "wx.qq.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "dingtalk.com",
+    "category": "Communication"
+  },
+  {
+    "domain": "walmart.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "target.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "bestbuy.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "aliexpress.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "alibaba.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "wish.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "newegg.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "costco.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "ikea.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "taobao.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "tmall.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "jd.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "pinduoduo.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "suning.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "vip.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "dangdang.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "mercadolibre.com",
+    "category": "Shopping"
+  },
+  {
+    "domain": "bbc.com",
+    "category": "News"
+  },
+  {
+    "domain": "cnn.com",
+    "category": "News"
+  },
+  {
+    "domain": "nytimes.com",
+    "category": "News"
+  },
+  {
+    "domain": "theguardian.com",
+    "category": "News"
+  },
+  {
+    "domain": "reuters.com",
+    "category": "News"
+  },
+  {
+    "domain": "apnews.com",
+    "category": "News"
+  },
+  {
+    "domain": "wsj.com",
+    "category": "News"
+  },
+  {
+    "domain": "washingtonpost.com",
+    "category": "News"
+  },
+  {
+    "domain": "economist.com",
+    "category": "News"
+  },
+  {
+    "domain": "forbes.com",
+    "category": "News"
+  },
+  {
+    "domain": "wired.com",
+    "category": "News"
+  },
+  {
+    "domain": "engadget.com",
+    "category": "News"
+  },
+  {
+    "domain": "arstechnica.com",
+    "category": "News"
+  },
+  {
+    "domain": "lite.cnn.com",
+    "category": "News"
+  },
+  {
+    "domain": "36kr.com",
+    "category": "News"
+  },
+  {
+    "domain": "huxiu.com",
+    "category": "News"
+  },
+  {
+    "domain": "ifanr.com",
+    "category": "News"
+  },
+  {
+    "domain": "sspai.com",
+    "category": "News"
+  },
+  {
+    "domain": "thepaper.cn",
+    "category": "News"
+  },
+  {
+    "domain": "sina.com.cn",
+    "category": "News"
+  },
+  {
+    "domain": "163.com",
+    "category": "News"
+  },
+  {
+    "domain": "sohu.com",
+    "category": "News"
+  },
+  {
+    "domain": "qq.com",
+    "category": "News"
+  },
+  {
+    "domain": "ithome.com",
+    "category": "News"
+  },
+  {
+    "domain": "coinbase.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "binance.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "kraken.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "robinhood.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "fidelity.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "schwab.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "tradingview.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "investing.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "marketwatch.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "morningstar.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "paypal.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "stripe.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "wise.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "mint.intuit.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "xueqiu.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "eastmoney.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "10jqka.com.cn",
+    "category": "Finance"
+  },
+  {
+    "domain": "alipay.com",
+    "category": "Finance"
+  },
+  {
+    "domain": "khanacademy.org",
+    "category": "Education"
+  },
+  {
+    "domain": "edx.org",
+    "category": "Education"
+  },
+  {
+    "domain": "udacity.com",
+    "category": "Education"
+  },
+  {
+    "domain": "skillshare.com",
+    "category": "Education"
+  },
+  {
+    "domain": "pluralsight.com",
+    "category": "Education"
+  },
+  {
+    "domain": "brilliant.org",
+    "category": "Education"
+  },
+  {
+    "domain": "duolingo.com",
+    "category": "Education"
+  },
+  {
+    "domain": "quizlet.com",
+    "category": "Education"
+  },
+  {
+    "domain": "chegg.com",
+    "category": "Education"
+  },
+  {
+    "domain": "wikipedia.org",
+    "category": "Education"
+  },
+  {
+    "domain": "wikibooks.org",
+    "category": "Education"
+  },
+  {
+    "domain": "ted.com",
+    "category": "Education"
+  },
+  {
+    "domain": "icourse163.org",
+    "category": "Education"
+  },
+  {
+    "domain": "xuetangx.com",
+    "category": "Education"
+  },
+  {
+    "domain": "imooc.com",
+    "category": "Education"
+  },
+  {
+    "domain": "scholar.google.com",
+    "category": "Research"
+  },
+  {
+    "domain": "researchgate.net",
+    "category": "Research"
+  },
+  {
+    "domain": "semanticscholar.org",
+    "category": "Research"
+  },
+  {
+    "domain": "jstor.org",
+    "category": "Research"
+  },
+  {
+    "domain": "sciencedirect.com",
+    "category": "Research"
+  },
+  {
+    "domain": "springer.com",
+    "category": "Research"
+  },
+  {
+    "domain": "nature.com",
+    "category": "Research"
+  },
+  {
+    "domain": "ncbi.nlm.nih.gov",
+    "category": "Research"
+  },
+  {
+    "domain": "biorxiv.org",
+    "category": "Research"
+  },
+  {
+    "domain": "ssrn.com",
+    "category": "Research"
+  },
+  {
+    "domain": "cnki.net",
+    "category": "Research"
+  },
+  {
+    "domain": "wanfangdata.com.cn",
+    "category": "Research"
+  },
+  {
+    "domain": "dribbble.com",
+    "category": "Design"
+  },
+  {
+    "domain": "behance.net",
+    "category": "Design"
+  },
+  {
+    "domain": "awwwards.com",
+    "category": "Design"
+  },
+  {
+    "domain": "unsplash.com",
+    "category": "Design"
+  },
+  {
+    "domain": "pexels.com",
+    "category": "Design"
+  },
+  {
+    "domain": "fonts.google.com",
+    "category": "Design"
+  },
+  {
+    "domain": "fontawesome.com",
+    "category": "Design"
+  },
+  {
+    "domain": "coolors.co",
+    "category": "Design"
+  },
+  {
+    "domain": "framer.com",
+    "category": "Design"
+  },
+  {
+    "domain": "webflow.com",
+    "category": "Design"
+  },
+  {
+    "domain": "penpot.app",
+    "category": "Design"
+  },
+  {
+    "domain": "zcool.com.cn",
+    "category": "Design"
+  },
+  {
+    "domain": "ui.cn",
+    "category": "Design"
+  },
+  {
+    "domain": "cloudflare.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "dash.cloudflare.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "digitalocean.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "heroku.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "render.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "railway.app",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "fly.io",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "supabase.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "firebase.google.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "planetscale.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "mongodb.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "redis.io",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "grafana.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "datadoghq.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "sentry.io",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "circleci.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "travis-ci.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "jenkins.io",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "console.aliyun.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "cloud.tencent.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "huaweicloud.com",
+    "category": "Cloud & DevOps"
+  },
+  {
+    "domain": "haveibeenpwned.com",
+    "category": "Security"
+  },
+  {
+    "domain": "virustotal.com",
+    "category": "Security"
+  },
+  {
+    "domain": "shodan.io",
+    "category": "Security"
+  },
+  {
+    "domain": "owasp.org",
+    "category": "Security"
+  },
+  {
+    "domain": "cve.mitre.org",
+    "category": "Security"
+  },
+  {
+    "domain": "nvd.nist.gov",
+    "category": "Security"
+  },
+  {
+    "domain": "1password.com",
+    "category": "Security"
+  },
+  {
+    "domain": "bitwarden.com",
+    "category": "Security"
+  },
+  {
+    "domain": "lastpass.com",
+    "category": "Security"
+  },
+  {
+    "domain": "authy.com",
+    "category": "Security"
+  },
+  {
+    "domain": "store.steampowered.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "steamcommunity.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "epicgames.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "gog.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "itch.io",
+    "category": "Gaming"
+  },
+  {
+    "domain": "ign.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "gamespot.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "roblox.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "minecraft.net",
+    "category": "Gaming"
+  },
+  {
+    "domain": "ea.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "ubisoft.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "playstation.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "xbox.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "nintendo.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "4399.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "yys.163.com",
+    "category": "Gaming"
+  },
+  {
+    "domain": "booking.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "airbnb.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "expedia.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "tripadvisor.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "kayak.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "skyscanner.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "agoda.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "hotels.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "trip.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "ctrip.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "qunar.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "fliggy.com",
+    "category": "Travel"
+  },
+  {
+    "domain": "12306.cn",
+    "category": "Travel"
+  },
+  {
+    "domain": "webmd.com",
+    "category": "Health"
+  },
+  {
+    "domain": "mayoclinic.org",
+    "category": "Health"
+  },
+  {
+    "domain": "healthline.com",
+    "category": "Health"
+  },
+  {
+    "domain": "nih.gov",
+    "category": "Health"
+  },
+  {
+    "domain": "who.int",
+    "category": "Health"
+  },
+  {
+    "domain": "myfitnesspal.com",
+    "category": "Health"
+  },
+  {
+    "domain": "strava.com",
+    "category": "Health"
+  },
+  {
+    "domain": "fitbit.com",
+    "category": "Health"
+  },
+  {
+    "domain": "dxy.cn",
+    "category": "Health"
+  },
+  {
+    "domain": "haodf.com",
+    "category": "Health"
+  },
+  {
+    "domain": "dictionary.com",
+    "category": "Reference"
+  },
+  {
+    "domain": "merriam-webster.com",
+    "category": "Reference"
+  },
+  {
+    "domain": "thesaurus.com",
+    "category": "Reference"
+  },
+  {
+    "domain": "wolframalpha.com",
+    "category": "Reference"
+  },
+  {
+    "domain": "translate.google.com",
+    "category": "Reference"
+  },
+  {
+    "domain": "deepl.com",
+    "category": "Reference"
+  },
+  {
+    "domain": "fanyi.baidu.com",
+    "category": "Reference"
+  },
+  {
+    "domain": "wikihow.com",
+    "category": "Reference"
+  },
+  {
+    "domain": "imdb.com",
+    "category": "Reference"
+  },
+  {
+    "domain": "goodreads.com",
+    "category": "Reference"
+  }
 ]

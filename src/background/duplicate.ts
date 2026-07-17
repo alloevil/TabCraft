@@ -3,7 +3,11 @@
 
 import { TRACKING_PARAMS } from '../shared/constants';
 
-/** Normalize a URL for duplicate comparison */
+/** Normalize a URL for duplicate comparison. This is the single source of
+ *  truth for "are these two tabs the same page" — background auto-close,
+ *  the Dedup view, and Quick Actions all import this instead of keeping
+ *  their own (previously divergent) copies, so a URL only counts as a
+ *  duplicate consistently everywhere. */
 export function normalizeUrl(url: string): string {
   try {
     const u = new URL(url);
@@ -12,6 +16,10 @@ export function normalizeUrl(url: string): string {
     for (const param of TRACKING_PARAMS) {
       u.searchParams.delete(param);
     }
+
+    // Ignore the www. subdomain — https://www.x.com and https://x.com are
+    // the same page for duplicate-detection purposes.
+    u.hostname = u.hostname.replace(/^www\./, '');
 
     // Remove trailing slash from pathname
     const pathname = u.pathname.replace(/\/$/, '') || '/';

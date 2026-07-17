@@ -7,6 +7,7 @@ import { RuleEngine, extractDomain, getFriendlyName } from './ai/rule-engine';
 import { GeminiNanoClassifier } from './ai/gemini-nano';
 import { Storage } from './storage';
 import { normalizeUrl } from './duplicate';
+import { AI_TRUST_THRESHOLD } from '../shared/constants';
 
 /** Get all tabs in the current window */
 async function getAllTabs(): Promise<chrome.tabs.Tab[]> {
@@ -51,7 +52,7 @@ export class TabManager {
     // Try AI first
     if (this.aiReady) {
       const aiResult = await this.aiClassifier.classify(url, title);
-      if (aiResult.confidence > 0.7) {
+      if (aiResult.confidence > AI_TRUST_THRESHOLD) {
         return aiResult;
       }
     }
@@ -139,7 +140,7 @@ export class TabManager {
       needsAi.forEach((tab, i) => {
         const ai = aiResults[i];
         // Only override the rule fallback when the AI is actually confident.
-        if (ai && ai.confidence > 0.7 && ai.category) {
+        if (ai && ai.confidence > AI_TRUST_THRESHOLD && ai.category) {
           buckets.set(tab.id!, ai.category);
           // Don't sink "Other" into the rule base — it would poison future runs.
           if (ai.category !== 'Other') {

@@ -1,27 +1,12 @@
 // TabCraft — Basic Tests
 import { describe, it, expect } from 'vitest';
+import { normalizeUrl } from '../background/duplicate';
+import { extractDomain } from '../background/ai/rule-engine';
 
-// Test normalizeUrl from duplicate.ts
+// Test normalizeUrl from duplicate.ts — imported directly (not reimplemented)
+// so this test actually catches regressions in the shared implementation
+// used by the background auto-close, DedupView, and QuickActions.
 describe('normalizeUrl', () => {
-  // Inline implementation for testing (no chrome API dependency)
-  function normalizeUrl(url: string): string {
-    try {
-      const u = new URL(url);
-      const params = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
-        'fbclid', 'gclid', 'msclkid', 'ref', '_ga', '_gl'];
-      for (const p of params) u.searchParams.delete(p);
-      const pathname = u.pathname.replace(/\/$/, '') || '/';
-      let normalized = u.origin + pathname + u.search;
-      if (u.hostname.includes('google.') && u.searchParams.has('q')) {
-        const q = u.searchParams.get('q');
-        normalized = `${u.origin}${pathname}?q=${encodeURIComponent(q!)}`;
-      }
-      return normalized;
-    } catch {
-      return url;
-    }
-  }
-
   it('removes tracking params', () => {
     const url = 'https://example.com/page?utm_source=twitter&utm_medium=social&id=123';
     expect(normalizeUrl(url)).toBe('https://example.com/page?id=123');
@@ -34,7 +19,11 @@ describe('normalizeUrl', () => {
 
   it('normalizes Google search', () => {
     const url = 'https://www.google.com/search?q=test&utm_source=bookmark';
-    expect(normalizeUrl(url)).toBe('https://www.google.com/search?q=test');
+    expect(normalizeUrl(url)).toBe('https://google.com/search?q=test');
+  });
+
+  it('strips the www. subdomain', () => {
+    expect(normalizeUrl('https://www.example.com/page')).toBe(normalizeUrl('https://example.com/page'));
   });
 
   it('handles invalid URLs gracefully', () => {
@@ -48,17 +37,8 @@ describe('normalizeUrl', () => {
   });
 });
 
-// Test extractDomain from rule-engine.ts
+// Test extractDomain from rule-engine.ts — imported directly, not reimplemented.
 describe('extractDomain', () => {
-  function extractDomain(url: string): string {
-    try {
-      const hostname = new URL(url).hostname;
-      return hostname.replace(/^www\./, '');
-    } catch {
-      return '';
-    }
-  }
-
   it('extracts domain from URL', () => {
     expect(extractDomain('https://www.google.com/search?q=test')).toBe('google.com');
   });
@@ -513,5 +493,43 @@ describe('i18n translate', async () => {
   it('replaces every occurrence of a placeholder', () => {
     // sanity: a var appearing once still works, and numbers coerce to string
     expect(translate('zh', 'grouped', { n: 1, g: 1 })).toBe('已将 1 个标签页分到 1 个分组');
+  });
+});
+
+// Test Storage's per-key write serialization (withLock in storage.ts).
+// Without it, two concurrent read-modify-write calls to the same key can both
+// read the same stale snapshot and the second write clobbers the first —
+// silently dropping increments/rules/snoozes. This mocks chrome.storage.local
+// with an artificial async delay so overlapping calls actually race.
+describe('Storage incrementStat concurrency', async () => {
+  const store: Record<string, any> = {};
+  (globalThis as any).chrome = {
+    storage: {
+      local: {
+        get: (key: string, cb: (r: any) => void) => {
+          setTimeout(() => cb({ [key]: store[key] }), 0);
+        },
+        set: (obj: Record<string, any>, cb?: () => void) => {
+          setTimeout(() => {
+            Object.assign(store, obj);
+            cb?.();
+          }, 0);
+        },
+      },
+    },
+  };
+
+  const { Storage } = await import('../background/storage');
+
+  it('does not drop increments under concurrent calls', async () => {
+    await Promise.all([
+      Storage.incrementStat('totalGrouped'),
+      Storage.incrementStat('totalGrouped'),
+      Storage.incrementStat('totalGrouped'),
+      Storage.incrementStat('totalGrouped'),
+      Storage.incrementStat('totalGrouped'),
+    ]);
+    const stats = await Storage.getStats();
+    expect(stats.totalGrouped).toBe(5);
   });
 });

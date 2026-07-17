@@ -1,6 +1,7 @@
 // TabCraft — Quick Actions (One-click operations like OneTab)
 
 import React, { useState, useEffect } from 'react';
+import { formatMemoryEstimate } from '../../shared/format';
 
 interface QuickActionsProps {
   onRefresh: () => void;
@@ -18,9 +19,7 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
   async function updateStats() {
     const tabs = await chrome.tabs.query({ currentWindow: true });
     setTabCount(tabs.length);
-    // Estimate memory (rough: ~50MB per tab)
-    const mb = tabs.length * 50;
-    setMemoryInfo(mb > 1024 ? `~${(mb / 1024).toFixed(1)} GB` : `~${mb} MB`);
+    setMemoryInfo(formatMemoryEstimate(tabs.length));
   }
 
   // OneTab style: collapse all tabs into a single list
@@ -77,49 +76,21 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
     onRefresh();
   }
 
-  // Hibernate all inactive tabs
+  // Hibernate all inactive tabs — delegated to the background's
+  // HibernationManager so it respects the same exclusion rules (pinned,
+  // audible, chrome://, hibernation timeout) and updates the same stats
+  // counter as the alarm-driven auto-hibernate and the context menu action.
   async function handleHibernateAll() {
-    const tabs = await chrome.tabs.query({ currentWindow: true });
-    let count = 0;
-    for (const tab of tabs) {
-      if (!tab.active && !tab.discarded && tab.id) {
-        try {
-          await chrome.tabs.discard(tab.id);
-          count++;
-        } catch {}
-      }
-    }
+    await chrome.runtime.sendMessage({ action: 'hibernateAll' });
     await updateStats();
     onRefresh();
   }
 
-  // Close all duplicates
+  // Close all duplicates — delegated to the background's TabManager so the
+  // "which tab to keep" heuristic and the totalDuplicatesClosed stat stay in
+  // sync with the context menu / keyboard-shortcut / auto-close code paths.
   async function handleCloseDuplicates() {
-    const tabs = await chrome.tabs.query({ currentWindow: true });
-    const seen = new Map<string, chrome.tabs.Tab>();
-    const duplicates: number[] = [];
-
-    for (const tab of tabs) {
-      if (!tab.url) continue;
-      const normalized = normalizeUrl(tab.url);
-      if (seen.has(normalized)) {
-        // Keep the one that's active or more recent
-        const existing = seen.get(normalized)!;
-        if (tab.active || (!existing.active && (tab.lastAccessed || 0) > (existing.lastAccessed || 0))) {
-          duplicates.push(existing.id!);
-          seen.set(normalized, tab);
-        } else {
-          duplicates.push(tab.id!);
-        }
-      } else {
-        seen.set(normalized, tab);
-      }
-    }
-
-    for (const id of duplicates) {
-      await chrome.tabs.remove(id);
-    }
-
+    await chrome.runtime.sendMessage({ action: 'closeDuplicates' });
     await updateStats();
     onRefresh();
   }
@@ -257,18 +228,3 @@ function getConfirmMessage(action: string): string {
   }
 }
 
-function normalizeUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    // Remove tracking params
-    const params = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
-      'fbclid', 'gclid', 'msclkid', 'ref', '_ga', '_gl'];
-    for (const p of params) u.searchParams.delete(p);
-    // Remove www. prefix
-    u.hostname = u.hostname.replace(/^www\./, '');
-    // Remove trailing slash
-    return u.origin + u.pathname.replace(/\/$/, '') + u.search;
-  } catch {
-    return url;
-  }
-}
