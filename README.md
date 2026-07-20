@@ -81,6 +81,26 @@ Most tab managers just group by domain. TabCraft understands what each tab is **
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Classification pipeline
+
+Each tab is classified through a cascade, from most to least confident —
+later steps only run if earlier ones don't have an answer:
+
+1. **Learned mapping** — a domain you've manually grouped before
+2. **Domain rule** — 390+ built-in rules (e.g. `github.com` → Development)
+3. **Multi-purpose domain override** — a small list of platforms (X,
+   Reddit, YouTube, Bilibili, TikTok, etc.) where content varies far more
+   than the domain implies. These skip straight to the tab's own title
+   keywords instead of trusting the domain rule outright, so a technical
+   thread on X classifies as AI & ML instead of always "Social"
+4. **URL path / title keywords** — weighted keyword scoring as a fallback
+   when no domain rule matches at all
+5. **On-device AI (Gemini Nano)** — only consulted when the rule engine
+   itself was unsure (steps 3-4 landed on a weak guess), so confident
+   domain matches never pay for an AI call. A low-confidence AI verdict
+   that agrees with the rule engine's weak guess is treated as
+   corroborating evidence rather than discarded
+
 ---
 
 ## Getting Started
