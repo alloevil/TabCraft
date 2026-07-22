@@ -44,6 +44,9 @@ export const TRACKING_PARAMS = [
   'si', 'feature', 'app',
 ];
 
+/** Toolbar-icon badge background color for the duplicate-tab count. */
+export const DUPLICATE_BADGE_COLOR = '#EA4335';
+
 /** Auto-save interval for session (ms) */
 export const SESSION_SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
 

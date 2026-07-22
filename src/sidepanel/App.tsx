@@ -31,9 +31,20 @@ export default function App() {
     loadTabs();
     chrome.runtime.sendMessage({ action: 'hasUndo' }).then(v => setCanUndo(!!v)).catch(() => {});
     chrome.runtime.sendMessage({ action: 'isAiReady' }).then(v => setAiReady(!!v)).catch(() => setAiReady(false));
-    // Load + watch the UI language so switching it in Settings is instant.
+    // Toolbar clicks always just open the side panel (openPanelOnActionClick
+    // disables chrome.action.onClicked, so we can't tell "this open was
+    // triggered by the duplicate badge" from any other open). As a stand-in:
+    // if duplicates exist right when the panel opens, land on the Dedup view
+    // instead of the default tab list — the most actionable place to be.
     chrome.storage.local.get('settings', (r) => {
       if (r.settings?.language) setLocale(r.settings.language);
+      if (r.settings?.showDuplicateBadge ?? true) {
+        chrome.runtime.sendMessage({ action: 'findDuplicates' })
+          .then((dupes: Array<{ tabs: unknown[] }>) => {
+            if (dupes?.length > 0) setView('dedup');
+          })
+          .catch(() => {});
+      }
     });
     const onStorage = (changes: { [k: string]: chrome.storage.StorageChange }) => {
       if (changes.settings?.newValue?.language) setLocale(changes.settings.newValue.language);
@@ -58,6 +69,7 @@ export default function App() {
       chrome.storage.onChanged.removeListener(onStorage);
     };
   }, []);
+
 
   async function loadTabs() {
     const [tabList, groupList] = await Promise.all([

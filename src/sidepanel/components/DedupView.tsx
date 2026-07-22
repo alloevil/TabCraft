@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { normalizeUrl } from '../../background/duplicate';
+import { focusTab } from '../utils';
 
 interface DuplicateGroup {
   normalizedUrl: string;
@@ -265,6 +266,13 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
                           W{entry.windowId}
                           {entry.tab.active && ' (active)'}
                         </span>
+                        <button
+                          className="tab-action-btn"
+                          onClick={(e) => { e.stopPropagation(); focusTab(entry.tab); }}
+                          title="Jump to this tab"
+                        >
+                          ↗
+                        </button>
                       </div>
                       <div className="dedup-tab-url" title={fullUrl}>
                         <span className="dedup-url-common">{commonPrefix}</span>

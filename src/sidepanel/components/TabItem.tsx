@@ -1,6 +1,7 @@
 // TabCraft — Tab Item Component
 
 import React from 'react';
+import { focusTab } from '../utils';
 
 interface TabItemProps {
   tab: chrome.tabs.Tab;
@@ -13,7 +14,7 @@ export function TabItem({ tab, onHibernate, onClose }: TabItemProps) {
   const isDiscarded = tab.discarded;
 
   function handleClick() {
-    chrome.tabs.update(tab.id!, { active: true });
+    focusTab(tab);
   }
 
   return (

@@ -4,7 +4,7 @@ import { TabManager } from './tab-manager';
 import { HibernationManager } from './hibernation';
 import { Storage } from './storage';
 import type { Settings } from '../shared/types';
-import { DUPLICATE_SCAN_DEBOUNCE_MS, SESSION_SAVE_DEBOUNCE_MS, TAB_LOAD_DELAY_MS, LEARN_DEBOUNCE_MS } from '../shared/constants';
+import { DUPLICATE_SCAN_DEBOUNCE_MS, SESSION_SAVE_DEBOUNCE_MS, TAB_LOAD_DELAY_MS, LEARN_DEBOUNCE_MS, DUPLICATE_BADGE_COLOR } from '../shared/constants';
 
 /** Singleton instances */
 let tabManager: TabManager;
@@ -34,6 +34,12 @@ async function init() {
   // Set up event listeners
   setupListeners();
 
+  // Set the toolbar badge to the current duplicate count on startup —
+  // otherwise it stays blank until the next tab event triggers a scan.
+  if (settingsCache.showDuplicateBadge) {
+    await updateDuplicateBadge();
+  }
+
   console.log(`[TabCraft] Ready! AI: ${tabManager.isAiReady() ? 'enabled' : 'rule-based fallback'}`);
 }
 
@@ -52,7 +58,15 @@ function setupListeners() {
   // chrome.storage.local.set from the side panel).
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local' && changes.settings) {
+      const prevShowBadge = settingsCache?.showDuplicateBadge;
       settingsCache = changes.settings.newValue as Settings;
+      if (prevShowBadge !== settingsCache.showDuplicateBadge) {
+        if (settingsCache.showDuplicateBadge) {
+          updateDuplicateBadge();
+        } else {
+          chrome.action.setBadgeText({ text: '' });
+        }
+      }
     }
   });
 
@@ -78,11 +92,12 @@ function setupListeners() {
     }
   });
 
-  // Auto-close duplicates — debounced so a burst of URL changes (SPA
-  // navigations, session restore) triggers one full-tab-list scan instead
-  // of one scan per tab per navigation.
+  // Auto-close duplicates / update the toolbar badge — debounced so a burst
+  // of URL changes (SPA navigations, session restore) triggers one full-tab
+  // scan instead of one per tab per navigation. The callback itself checks
+  // which of the two features (if any) is enabled.
   chrome.tabs.onUpdated.addListener((_tabId, changeInfo) => {
-    if (changeInfo.url && settingsCache.autoCloseDuplicates) {
+    if (changeInfo.url) {
       scheduleDuplicateScan();
     }
   });
@@ -183,8 +198,14 @@ function setupListeners() {
 
   // Save session on tab changes — debounced so closing/opening/dragging a
   // batch of tabs collapses into one snapshot write instead of one per event.
-  chrome.tabs.onCreated.addListener(() => scheduleSessionSave());
-  chrome.tabs.onRemoved.addListener(() => scheduleSessionSave());
+  chrome.tabs.onCreated.addListener(() => {
+    scheduleSessionSave();
+    scheduleDuplicateScan();
+  });
+  chrome.tabs.onRemoved.addListener(() => {
+    scheduleSessionSave();
+    scheduleDuplicateScan();
+  });
   chrome.tabs.onMoved.addListener(() => scheduleSessionSave());
 }
 
@@ -192,28 +213,50 @@ function setupListeners() {
  *  cancelled if the tab closes before the load delay elapses. */
 const pendingAutoGroupTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
-/** Debounced duplicate scan — coalesces a burst of onUpdated(url) events
- *  (SPA navigations, session restore) into a single findDuplicates() pass. */
+/** Debounced duplicate scan — coalesces a burst of tab create/remove/url-
+ *  change events into a single findDuplicates() pass. Drives both
+ *  auto-close and the toolbar badge count; does nothing if neither feature
+ *  is enabled. */
 let duplicateScanTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleDuplicateScan() {
+  if (!settingsCache.autoCloseDuplicates && !settingsCache.showDuplicateBadge) return;
   if (duplicateScanTimer) clearTimeout(duplicateScanTimer);
   duplicateScanTimer = setTimeout(async () => {
     duplicateScanTimer = null;
-    const duplicates = await tabManager.findDuplicates();
-    const activeTabIds = new Set(
-      (await chrome.tabs.query({ active: true })).map((t) => t.id)
-    );
-    for (const dup of duplicates) {
-      // Sort by lastAccessed descending — most recent first
-      const sorted = dup.tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
-      // Keep the most recently active tab, close the rest — but never close
-      // a tab that's currently focused in some window.
-      const toClose = sorted.slice(1).filter((tab) => !activeTabIds.has(tab.id));
-      for (const tab of toClose) {
-        await chrome.tabs.remove(tab.id!);
+    if (settingsCache.autoCloseDuplicates) {
+      const duplicates = await tabManager.findDuplicates();
+      const activeTabIds = new Set(
+        (await chrome.tabs.query({ active: true })).map((t) => t.id)
+      );
+      for (const dup of duplicates) {
+        // Sort by lastAccessed descending — most recent first
+        const sorted = dup.tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+        // Keep the most recently active tab, close the rest — but never close
+        // a tab that's currently focused in some window.
+        const toClose = sorted.slice(1).filter((tab) => !activeTabIds.has(tab.id));
+        for (const tab of toClose) {
+          await chrome.tabs.remove(tab.id!);
+        }
       }
     }
+    if (settingsCache.showDuplicateBadge) {
+      // Re-query fresh rather than reuse the list above — the auto-close
+      // pass (if it ran) may have just closed some of them.
+      await updateDuplicateBadge();
+    }
   }, DUPLICATE_SCAN_DEBOUNCE_MS);
+}
+
+/** Set the toolbar icon's badge to the number of closeable duplicate tabs
+ *  (i.e. every tab in a duplicate group except the one that would be kept),
+ *  clearing the badge entirely when there are none. */
+async function updateDuplicateBadge(): Promise<void> {
+  const duplicates = await tabManager.findDuplicates();
+  const count = duplicates.reduce((sum, group) => sum + Math.max(group.tabs.length - 1, 0), 0);
+  await chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' });
+  if (count > 0) {
+    await chrome.action.setBadgeBackgroundColor({ color: DUPLICATE_BADGE_COLOR });
+  }
 }
 
 /** Debounced session save, used by the high-frequency tab-mutation
