@@ -277,6 +277,12 @@ async function handleMessage(message: { action: string; [key: string]: any }) {
     case 'smartGroup':
       return tabManager.smartGroupAll();
 
+    case 'previewCustomCategories':
+      return tabManager.previewCustomCategories(message.instruction);
+
+    case 'smartGroupCustom':
+      return tabManager.smartGroupCustom(message.instruction, message.categories);
+
     case 'undoGrouping':
       return tabManager.undoLastGrouping();
 

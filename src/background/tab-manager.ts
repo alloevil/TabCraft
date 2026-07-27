@@ -232,23 +232,88 @@ export class TabManager {
     );
     const tabBuckets = await this.classifyAllTabs(groupable, settings.groupingMode);
 
-    // Bucket tabs into groups — by category (smart) or by domain (domain mode).
-    // Unclassified tabs land in an "Other" group so one click leaves nothing
-    // ungrouped in the native tab strip.
+    return this.materializeGroups(tabBuckets, groupable, 'Other', settings.minTabsPerGroup);
+  }
+
+  /** Group tabs by a one-off, free-text instruction instead of the built-in
+   *  taxonomy — e.g. "整体分为ai、工作、交流、开发、其他". Bypasses RuleEngine
+   *  entirely (its fixed-category output is meaningless against an arbitrary
+   *  user-defined bucket list) and requires AI: there's no way to map
+   *  arbitrary category names onto keyword matching without semantic
+   *  understanding, so this throws rather than silently misclassifying
+   *  everything when AI isn't available. */
+  private async extractCategoriesOrThrow(instruction: string): Promise<string[]> {
+    if (!this.aiReady) {
+      throw new Error('AI_UNAVAILABLE');
+    }
+    const categories = await this.aiClassifier.extractCategories(instruction);
+    if (!categories || categories.length < 2) {
+      throw new Error('COULD_NOT_PARSE_INSTRUCTION');
+    }
+    return categories;
+  }
+
+  /** Preview step: turn an instruction into a category list WITHOUT
+   *  touching any tabs — no undo snapshot, no classification, no grouping.
+   *  Lets the UI show the user what the AI understood before committing to
+   *  an actual re-group (see smartGroupCustom). */
+  async previewCustomCategories(instruction: string): Promise<string[]> {
+    return this.extractCategoriesOrThrow(instruction);
+  }
+
+  /** `categories`, when provided, is assumed already-confirmed by the user
+   *  (via previewCustomCategories) and skips re-extracting — one AI
+   *  round-trip total across preview+confirm, not two. */
+  async smartGroupCustom(
+    instruction: string,
+    categories?: string[]
+  ): Promise<{ grouped: number; groups: number; categories: string[] }> {
+    const resolvedCategories = categories ?? await this.extractCategoriesOrThrow(instruction);
+
+    const tabs = await getAllTabs();
+    const settings = await Storage.getSettings();
+    await this.saveUndoSnapshot(tabs);
+
+    const groupable = tabs.filter(
+      t => t.url && !t.url.startsWith('chrome://') && !t.pinned
+    );
+    const batch = groupable.map(t => ({ url: t.url || '', title: t.title || '' }));
+    const results = await this.aiClassifier.classifyBatch(batch, resolvedCategories);
+
+    const catchAll = resolvedCategories[resolvedCategories.length - 1];
+    const buckets = new Map<number, string>();
+    groupable.forEach((tab, i) => {
+      buckets.set(tab.id!, results[i]?.category || catchAll);
+    });
+
+    const { grouped, groups } = await this.materializeGroups(buckets, groupable, catchAll, settings.minTabsPerGroup);
+    return { grouped, groups, categories: resolvedCategories };
+  }
+
+  /** Shared tail of smartGroupAll/smartGroupCustom: bucket tabs into groups
+   *  (filtering by minimum size), reuse existing same-named tab groups
+   *  instead of always creating new ones, color by category, and record
+   *  the grouped-tab stat. `catchAllName` (e.g. "Other") always sorts last
+   *  so a one-click grouping never leaves the miscellaneous bucket first. */
+  private async materializeGroups(
+    tabBuckets: Map<number, string>,
+    groupable: chrome.tabs.Tab[],
+    catchAllName: string,
+    minTabsPerGroup: number
+  ): Promise<{ grouped: number; groups: number }> {
     const groupTabs = new Map<string, number[]>();
     for (const tab of groupable) {
-      const bucket = tabBuckets.get(tab.id!) || 'Other';
+      const bucket = tabBuckets.get(tab.id!) || catchAllName;
       const existing = groupTabs.get(bucket) || [];
       existing.push(tab.id!);
       groupTabs.set(bucket, existing);
     }
 
-    // Filter by minimum tabs per group, then sort so "Other" comes last
     const validGroups = Array.from(groupTabs.entries())
-      .filter(([, tabIds]) => tabIds.length >= settings.minTabsPerGroup)
+      .filter(([, tabIds]) => tabIds.length >= minTabsPerGroup)
       .sort(([a], [b]) => {
-        if (a === 'Other') return 1;
-        if (b === 'Other') return -1;
+        if (a === catchAllName) return 1;
+        if (b === catchAllName) return -1;
         return 0;
       });
 

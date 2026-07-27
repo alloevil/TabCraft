@@ -2,7 +2,7 @@
 // Uses Chrome's built-in AI (Gemini Nano) for on-device tab classification
 // API: window.ai.languageModel (Chrome 131+)
 
-import type { ClassificationResult, CategoryName } from '../../shared/types';
+import type { ClassificationResult } from '../../shared/types';
 import { CATEGORIES } from '../../shared/types';
 import { AI_CONFIDENCE } from '../../shared/constants';
 
@@ -80,11 +80,14 @@ const CLASSIFY_GUIDELINES = `Guidelines:
 - Use "Other" only when nothing fits.`;
 
 /** Build classification prompt */
-function buildPrompt(url: string, title: string): string {
-  const categories = CATEGORIES.join(', ');
-  return `Classify this browser tab into exactly ONE of these categories: ${categories}
+export function buildPrompt(url: string, title: string, categories: readonly string[]): string {
+  const list = categories.join(', ');
+  const guidelines = categories === CATEGORIES
+    ? CLASSIFY_GUIDELINES
+    : `Guidelines:\n- Use the closest matching category.\n- If nothing fits, use "${categories[categories.length - 1]}".`;
+  return `Classify this browser tab into exactly ONE of these categories: ${list}
 
-${CLASSIFY_GUIDELINES}
+${guidelines}
 
 URL: ${url}
 Title: ${title}
@@ -94,53 +97,85 @@ Reply with ONLY the category name, nothing else.`;
 
 /** Build a single prompt that classifies many tabs at once — far faster than
  *  one LLM round-trip per tab. */
-function buildBatchPrompt(tabs: Array<{ url: string; title: string }>): string {
-  const categories = CATEGORIES.join(', ');
-  const list = tabs
+export function buildBatchPrompt(tabs: Array<{ url: string; title: string }>, categories: readonly string[]): string {
+  const list = categories.join(', ');
+  const guidelines = categories === CATEGORIES
+    ? CLASSIFY_GUIDELINES
+    : `Guidelines:\n- Use the closest matching category.\n- If unsure for a tab, use "${categories[categories.length - 1]}".`;
+  const tabList = tabs
     .map((t, i) => `${i + 1}. Title: ${t.title}\n   URL: ${t.url}`)
     .join('\n');
-  return `Classify each browser tab into exactly ONE of these categories: ${categories}
+  return `Classify each browser tab into exactly ONE of these categories: ${list}
 
-${CLASSIFY_GUIDELINES}
+${guidelines}
 
 Tabs:
-${list}
+${tabList}
 
-Reply with ONLY one category name per line, in the same order, numbered like "1. Development". If unsure for a tab, use "Other".`;
+Reply with ONLY one category name per line, in the same order, numbered like "1. ${categories[0]}". If unsure for a tab, use "${categories[categories.length - 1]}".`;
 }
 
 /** Parse a numbered batch response into per-index categories. */
-function parseBatchResponse(response: string, count: number): (CategoryName | null)[] {
-  const results: (CategoryName | null)[] = new Array(count).fill(null);
+export function parseBatchResponse(response: string, count: number, categories: readonly string[]): (string | null)[] {
+  const results: (string | null)[] = new Array(count).fill(null);
   const lines = response.split('\n');
   for (const line of lines) {
     const m = line.match(/^\s*(\d+)[.)]\s*(.+)$/);
     if (!m) continue;
     const idx = parseInt(m[1], 10) - 1;
     if (idx < 0 || idx >= count) continue;
-    results[idx] = parseCategory(m[2]);
+    results[idx] = parseCategory(m[2], categories);
   }
   return results;
 }
 
 /** Parse AI response to extract category */
-function parseCategory(response: string): CategoryName | null {
+export function parseCategory(response: string, categories: readonly string[]): string | null {
   const cleaned = response.trim().replace(/['"]/g, '');
 
   // Exact match
-  if ((CATEGORIES as readonly string[]).includes(cleaned)) {
-    return cleaned as CategoryName;
+  if (categories.includes(cleaned)) {
+    return cleaned;
   }
 
   // Fuzzy match — find closest category
   const lower = cleaned.toLowerCase();
-  for (const cat of CATEGORIES) {
+  for (const cat of categories) {
     if (cat.toLowerCase() === lower || cat.toLowerCase().includes(lower)) {
-      return cat as CategoryName;
+      return cat;
     }
   }
 
   return null;
+}
+
+/** Ask the model to turn a free-text organizing instruction (e.g. "整体分为
+ *  ai、工作、交流、开发、其他") into a short list of category names, used by
+ *  GeminiNanoClassifier.extractCategories(). This is a separate round-trip
+ *  from classification itself — messier instructions than a clean list
+ *  ("group anything cat-related together, the rest doesn't matter") still
+ *  need the model to interpret intent before we know what buckets exist. */
+function buildCategoryExtractionPrompt(instruction: string): string {
+  return `A user wants to organize their browser tabs. Their instruction: "${instruction}"
+
+List the category names implied by this instruction as a short comma-separated list (2-8 categories). If the instruction doesn't obviously cover every possible tab, include a final catch-all category (e.g. "Other").
+
+Reply with ONLY the comma-separated list, nothing else.`;
+}
+
+/** Parse the model's category-extraction response into a clean list, always
+ *  ending with a catch-all bucket — every downstream classification result
+ *  falls back to the last category when nothing else fits. */
+export function parseCategoryList(response: string): string[] {
+  const names = response
+    .replace(/^[^:]*:\s*/, '')       // strip a leading "Categories:" style prefix
+    .split(/[,，、\n]/)
+    .map((s) => s.trim().replace(/^[-•\d.)\s]+/, '').replace(/['"]/g, ''))
+    .filter(Boolean);
+  const deduped = Array.from(new Set(names));
+  const hasCatchAll = deduped.some((n) => /^(other|其他|else|misc)/i.test(n));
+  if (!hasCatchAll) deduped.push('Other');
+  return deduped;
 }
 
 /**
@@ -181,7 +216,7 @@ export class GeminiNanoClassifier {
   }
 
   /** Classify a tab using Gemini Nano */
-  async classify(url: string, title: string): Promise<ClassificationResult> {
+  async classify(url: string, title: string, categories: readonly string[] = CATEGORIES): Promise<ClassificationResult> {
     if (!this.isReady() || !this.session) {
       return {
         category: 'Other',
@@ -191,9 +226,9 @@ export class GeminiNanoClassifier {
     }
 
     try {
-      const prompt = buildPrompt(url, title);
+      const prompt = buildPrompt(url, title, categories);
       const response = await this.session.prompt(prompt);
-      const category = parseCategory(response);
+      const category = parseCategory(response, categories);
 
       if (category) {
         return {
@@ -219,35 +254,52 @@ export class GeminiNanoClassifier {
 
   /** Classify multiple tabs in a single LLM call (falls back to per-tab on error). */
   async classifyBatch(
-    tabs: Array<{ url: string; title: string }>
+    tabs: Array<{ url: string; title: string }>,
+    categories: readonly string[] = CATEGORIES
   ): Promise<ClassificationResult[]> {
     if (!this.isReady() || !this.session || tabs.length === 0) {
       return tabs.map(() => ({ category: 'Other', confidence: 0, source: 'ai' as const }));
     }
 
     try {
-      const prompt = buildBatchPrompt(tabs);
+      const prompt = buildBatchPrompt(tabs, categories);
       const response = await this.session.prompt(prompt);
-      const cats = parseBatchResponse(response, tabs.length);
+      const cats = parseBatchResponse(response, tabs.length, categories);
       // If parsing yielded nothing usable, fall back to per-tab classification.
       if (cats.every(c => c === null)) {
-        return this.classifyEach(tabs);
+        return this.classifyEach(tabs, categories);
       }
       return cats.map(c => c
         ? { category: c, confidence: AI_CONFIDENCE.SUCCESS, source: 'ai' as const }
         : { category: 'Other', confidence: AI_CONFIDENCE.LOW, source: 'ai' as const });
     } catch {
-      return this.classifyEach(tabs);
+      return this.classifyEach(tabs, categories);
+    }
+  }
+
+  /** Turn a free-text organizing instruction into a category list — see
+   *  buildCategoryExtractionPrompt() for why this needs its own AI call
+   *  rather than being parsed locally. Returns null if AI isn't ready or
+   *  the model's response couldn't be parsed into anything usable. */
+  async extractCategories(instruction: string): Promise<string[] | null> {
+    if (!this.isReady() || !this.session) return null;
+    try {
+      const response = await this.session.prompt(buildCategoryExtractionPrompt(instruction));
+      const categories = parseCategoryList(response);
+      return categories.length >= 2 ? categories : null;
+    } catch {
+      return null;
     }
   }
 
   /** Per-tab classification fallback. */
   private async classifyEach(
-    tabs: Array<{ url: string; title: string }>
+    tabs: Array<{ url: string; title: string }>,
+    categories: readonly string[] = CATEGORIES
   ): Promise<ClassificationResult[]> {
     const results: ClassificationResult[] = [];
     for (const tab of tabs) {
-      results.push(await this.classify(tab.url, tab.title));
+      results.push(await this.classify(tab.url, tab.title, categories));
     }
     return results;
   }

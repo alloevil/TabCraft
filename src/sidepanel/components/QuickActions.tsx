@@ -11,9 +11,20 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
   const [tabCount, setTabCount] = useState(0);
   const [memoryInfo, setMemoryInfo] = useState('');
   const [showConfirm, setShowConfirm] = useState<string | null>(null);
+  const [customInstruction, setCustomInstruction] = useState('');
+  const [customStatus, setCustomStatus] = useState('');
+  const [customBusy, setCustomBusy] = useState(false);
+  const [aiReady, setAiReady] = useState<boolean | null>(null);
+  const [previewCategories, setPreviewCategories] = useState<string[] | null>(null);
 
   useEffect(() => {
     updateStats();
+    // Check AI availability upfront so the custom-group input can be
+    // disabled with a clear reason instead of letting the user type an
+    // instruction and only discover it can't run after clicking "Group".
+    chrome.runtime.sendMessage({ action: 'isAiReady' })
+      .then((ready) => setAiReady(!!ready))
+      .catch(() => setAiReady(false));
   }, []);
 
   async function updateStats() {
@@ -140,6 +151,46 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
     }
   }
 
+  // Group tabs by a free-text instruction (e.g. "整体分为ai、工作、交流、开发、
+  // 其他") instead of the built-in taxonomy — requires on-device AI, since
+  // there's no way to map arbitrary category names onto keyword matching.
+  //
+  // Two-step: preview the AI's understanding of the instruction as a
+  // category list first, so a misread instruction is caught before any
+  // tab actually gets moved — only handleCustomConfirm below touches tabs.
+  async function handleCustomPreview() {
+    const instruction = customInstruction.trim();
+    if (!instruction || customBusy) return;
+    setCustomBusy(true);
+    setCustomStatus('');
+    try {
+      const result = await chrome.runtime.sendMessage({ action: 'previewCustomCategories', instruction });
+      if (result?.error) throw new Error(result.error);
+      setPreviewCategories(result);
+    } catch (err: any) {
+      setCustomStatus(describeCustomGroupError(err));
+    }
+    setCustomBusy(false);
+  }
+
+  async function handleCustomConfirm() {
+    if (!previewCategories) return;
+    setCustomBusy(true);
+    const categories = previewCategories;
+    setPreviewCategories(null);
+    try {
+      const instruction = customInstruction.trim();
+      const result = await chrome.runtime.sendMessage({ action: 'smartGroupCustom', instruction, categories });
+      if (result?.error) throw new Error(result.error);
+      setCustomStatus(`Grouped into: ${result.categories.join(', ')} (${result.grouped} tabs)`);
+      await updateStats();
+      onRefresh();
+    } catch (err: any) {
+      setCustomStatus(describeCustomGroupError(err));
+    }
+    setCustomBusy(false);
+  }
+
   return (
     <div className="quick-actions">
       <div className="quick-stats">
@@ -151,6 +202,39 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
           <span className="quick-stat-value">{memoryInfo}</span>
           <span className="quick-stat-label">Est. Memory</span>
         </div>
+      </div>
+
+      {/* Custom-taxonomy grouping: group tabs by a free-text instruction
+          instead of the built-in categories. Requires on-device AI. */}
+      <div className="custom-group">
+        <label className="custom-group-label">Group by your own instruction</label>
+        {aiReady === false ? (
+          <p className="custom-group-notice">
+            On-device AI (Gemini Nano) isn't available right now — this feature needs it.
+          </p>
+        ) : (
+          <>
+            <div className="custom-group-row">
+              <input
+                type="text"
+                className="custom-group-input"
+                placeholder="e.g. 整体分为 AI、工作、交流、开发、其他"
+                value={customInstruction}
+                onChange={(e) => setCustomInstruction(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleCustomPreview(); }}
+                disabled={customBusy || aiReady === null}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={handleCustomPreview}
+                disabled={customBusy || aiReady === null || !customInstruction.trim()}
+              >
+                {customBusy ? '⏳' : 'Group'}
+              </button>
+            </div>
+            {customStatus && <p className="custom-group-status">{customStatus}</p>}
+          </>
+        )}
       </div>
 
       <div className="quick-grid">
@@ -197,7 +281,7 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
         </button>
       </div>
 
-      {/* Confirm dialog */}
+      {/* Confirm dialog for destructive quick actions */}
       {showConfirm && (
         <div className="confirm-overlay" onClick={() => setShowConfirm(null)}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
@@ -207,6 +291,29 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
                 Confirm
               </button>
               <button className="btn btn-secondary" onClick={() => setShowConfirm(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview dialog for custom-taxonomy grouping: shows what the AI
+          understood BEFORE any tab actually gets moved. */}
+      {previewCategories && (
+        <div className="confirm-overlay" onClick={() => setPreviewCategories(null)}>
+          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <p>Group tabs into these categories?</p>
+            <div className="custom-group-chips">
+              {previewCategories.map((c) => (
+                <span key={c} className="custom-group-chip">{c}</span>
+              ))}
+            </div>
+            <div className="confirm-actions">
+              <button className="btn btn-primary" onClick={handleCustomConfirm}>
+                Confirm
+              </button>
+              <button className="btn btn-secondary" onClick={() => setPreviewCategories(null)}>
                 Cancel
               </button>
             </div>
@@ -227,4 +334,11 @@ function getConfirmMessage(action: string): string {
     default: return 'Are you sure?';
   }
 }
+
+function describeCustomGroupError(err: any): string {
+  return err?.message === 'AI_UNAVAILABLE'
+    ? "This needs on-device AI (Gemini Nano), which isn't available right now."
+    : 'Could not understand that instruction — try rephrasing.';
+}
+
 
