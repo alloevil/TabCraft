@@ -2,7 +2,7 @@
   "name": "tabcraft",
   "displayName": "TabCraft - AI Tab Manager",
   "version": "0.1.9",
-  "description": "AI-powered tab organizer for Chrome \u2014 auto-groups by topic, hibernates inactive tabs, removes duplicates. 100% private, on-device AI.",
+  "description": "AI-powered tab organizer for Chrome — auto-groups by topic, hibernates inactive tabs, removes duplicates. 100% private, on-device AI.",
   "author": "TabCraft Contributors",
   "license": "MIT",
   "homepage": "https://github.com/alloevil/tabcraft",
@@ -31,8 +31,11 @@
     "build": "plasmo build",
     "package": "plasmo package",
     "lint": "eslint src/ --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -42,15 +45,17 @@
     "tldts": "^7.4.9"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@types/chrome": "^0.0.280",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
-    "autoprefixer": "^10.4.20",
+    "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^8.57.1",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.9.6",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   },
@@ -62,9 +67,6 @@
       "sidePanel",
       "contextMenus",
       "alarms"
-    ],
-    "host_permissions": [
-      "<all_urls>"
     ],
     "commands": {
       "smart-group": {

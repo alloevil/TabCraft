@@ -11,18 +11,22 @@ declare namespace chrome {
       collapsed: boolean;
     }
 
-    type ColorEnum = 'blue' | 'red' | 'yellow' | 'green' | 'pink' | 'purple' | 'cyan' | 'orange' | 'grey';
+    type ColorEnum =
+      'blue' | 'red' | 'yellow' | 'green' | 'pink' | 'purple' | 'cyan' | 'orange' | 'grey';
 
     interface QueryInfo {
       windowId?: number;
     }
 
     function query(queryInfo: QueryInfo): Promise<TabGroup[]>;
-    function update(groupId: number, updateProperties: {
-      title?: string;
-      color?: ColorEnum;
-      collapsed?: boolean;
-    }): Promise<void>;
+    function update(
+      groupId: number,
+      updateProperties: {
+        title?: string;
+        color?: ColorEnum;
+        collapsed?: boolean;
+      }
+    ): Promise<void>;
 
     const onCreated: chrome.events.Event<(group: TabGroup) => void>;
     const onUpdated: chrome.events.Event<(group: TabGroup) => void>;
@@ -50,21 +54,12 @@ declare namespace chrome {
     function discard(tabId: number): Promise<void>;
   }
 
-  namespace ai {
-    function canCreateTextSession(): Promise<'readily' | 'after-download' | 'no'>;
-    function createTextSession(): Promise<{ prompt: (text: string) => Promise<string>; destroy: () => void }>;
-  }
-
   namespace windows {
     const WINDOW_ID_CURRENT: number;
   }
 
   namespace contextMenus {
-    function create(createProperties: {
-      id: string;
-      title: string;
-      contexts: string[];
-    }): void;
+    function create(createProperties: { id: string; title: string; contexts: string[] }): void;
 
     const onClicked: chrome.events.Event<(info: { menuItemId: string }) => void>;
   }

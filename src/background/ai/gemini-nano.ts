@@ -1,54 +1,55 @@
 // TabCraft — Gemini Nano AI Classification Engine
-// Uses Chrome's built-in AI (Gemini Nano) for on-device tab classification
-// API: window.ai.languageModel (Chrome 131+)
+// Uses Chrome's built-in AI (Gemini Nano) for on-device tab classification.
+// API: the global `LanguageModel` object (Prompt API, Chrome 138+ stable),
+// with a fallback to the pre-138 origin-trial shape `self.ai.languageModel`.
+// Both are exposed to MV3 service workers as globals — there is no `window`
+// in a service worker, so any `window.*` probe would always fail here.
 
 import type { ClassificationResult } from '../../shared/types';
 import { CATEGORIES } from '../../shared/types';
 import { AI_CONFIDENCE } from '../../shared/constants';
 
-/** Experimental AI API types (not yet in TypeScript definitions) */
-interface LanguageModelCapabilities {
-  available: 'readily' | 'after-download' | 'no';
-}
-interface LanguageModel {
-  capabilities(): Promise<LanguageModelCapabilities>;
-  create(): Promise<LanguageModelSession>;
-  prompt(text: string): Promise<string>;
-  destroy(): void;
-}
+/** Prompt API types (not yet in TypeScript definitions) */
 interface LanguageModelSession {
   prompt(text: string): Promise<string>;
   destroy(): void;
 }
-interface WindowAI {
-  languageModel?: LanguageModel;
+
+/** Chrome 138+ stable Prompt API: a global `LanguageModel` object. */
+interface LanguageModelStatic {
+  availability(): Promise<'unavailable' | 'downloadable' | 'downloading' | 'available'>;
+  create(): Promise<LanguageModelSession>;
 }
 
-/** Safely access the experimental window.ai API */
-function getAI(): WindowAI | null {
-  try {
-    if (typeof window !== 'undefined' && 'ai' in window) {
-      return (window as unknown as { ai: WindowAI }).ai;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+/** Pre-138 origin-trial shape: `self.ai.languageModel`. */
+interface LegacyLanguageModelFactory {
+  capabilities(): Promise<{ available: 'readily' | 'after-download' | 'no' }>;
+  create(): Promise<LanguageModelSession>;
 }
+
+/* eslint-disable no-var */
+declare global {
+  // Prompt API globals — not yet in TypeScript's lib definitions, declared
+  // here so access below is type-checked instead of cast.
+  var LanguageModel: LanguageModelStatic | undefined;
+  var ai: { languageModel?: LegacyLanguageModelFactory } | undefined;
+}
+/* eslint-enable no-var */
 
 /** Check if Chrome built-in AI is available */
 export async function isGeminiNanoAvailable(): Promise<boolean> {
   try {
-    // New API: window.ai.languageModel (Chrome 131+)
-    const ai = getAI();
-    if (ai?.languageModel) {
-      const capabilities = await ai.languageModel.capabilities();
-      return capabilities.available === 'readily' || capabilities.available === 'after-download';
+    const lm = globalThis.LanguageModel;
+    if (lm) {
+      const availability = await lm.availability();
+      // 'downloadable'/'downloading' count as available: create() below
+      // triggers/awaits the model download on first use.
+      return availability !== 'unavailable';
     }
-    // Legacy API fallback (deprecated)
-    if (typeof chrome !== 'undefined' && chrome.ai?.canCreateTextSession) {
-      const status = await chrome.ai.canCreateTextSession();
-      return status === 'readily' || status === 'after-download';
+    const legacy = globalThis.ai?.languageModel;
+    if (legacy) {
+      const capabilities = await legacy.capabilities();
+      return capabilities.available === 'readily' || capabilities.available === 'after-download';
     }
     return false;
   } catch {
@@ -58,14 +59,13 @@ export async function isGeminiNanoAvailable(): Promise<boolean> {
 
 /** Create a Gemini Nano session */
 async function createSession(): Promise<LanguageModelSession> {
-  // New API: window.ai.languageModel.create()
-  const ai = getAI();
-  if (ai?.languageModel?.create) {
-    return await ai.languageModel.create();
+  const lm = globalThis.LanguageModel;
+  if (lm) {
+    return lm.create();
   }
-  // Legacy API fallback
-  if (typeof chrome !== 'undefined' && chrome.ai?.createTextSession) {
-    return await chrome.ai.createTextSession();
+  const legacy = globalThis.ai?.languageModel;
+  if (legacy) {
+    return legacy.create();
   }
   throw new Error('No AI API available');
 }
@@ -82,9 +82,10 @@ const CLASSIFY_GUIDELINES = `Guidelines:
 /** Build classification prompt */
 export function buildPrompt(url: string, title: string, categories: readonly string[]): string {
   const list = categories.join(', ');
-  const guidelines = categories === CATEGORIES
-    ? CLASSIFY_GUIDELINES
-    : `Guidelines:\n- Use the closest matching category.\n- If nothing fits, use "${categories[categories.length - 1]}".`;
+  const guidelines =
+    categories === CATEGORIES
+      ? CLASSIFY_GUIDELINES
+      : `Guidelines:\n- Use the closest matching category.\n- If nothing fits, use "${categories[categories.length - 1]}".`;
   return `Classify this browser tab into exactly ONE of these categories: ${list}
 
 ${guidelines}
@@ -97,14 +98,16 @@ Reply with ONLY the category name, nothing else.`;
 
 /** Build a single prompt that classifies many tabs at once — far faster than
  *  one LLM round-trip per tab. */
-export function buildBatchPrompt(tabs: Array<{ url: string; title: string }>, categories: readonly string[]): string {
+export function buildBatchPrompt(
+  tabs: Array<{ url: string; title: string }>,
+  categories: readonly string[]
+): string {
   const list = categories.join(', ');
-  const guidelines = categories === CATEGORIES
-    ? CLASSIFY_GUIDELINES
-    : `Guidelines:\n- Use the closest matching category.\n- If unsure for a tab, use "${categories[categories.length - 1]}".`;
-  const tabList = tabs
-    .map((t, i) => `${i + 1}. Title: ${t.title}\n   URL: ${t.url}`)
-    .join('\n');
+  const guidelines =
+    categories === CATEGORIES
+      ? CLASSIFY_GUIDELINES
+      : `Guidelines:\n- Use the closest matching category.\n- If unsure for a tab, use "${categories[categories.length - 1]}".`;
+  const tabList = tabs.map((t, i) => `${i + 1}. Title: ${t.title}\n   URL: ${t.url}`).join('\n');
   return `Classify each browser tab into exactly ONE of these categories: ${list}
 
 ${guidelines}
@@ -116,7 +119,11 @@ Reply with ONLY one category name per line, in the same order, numbered like "1.
 }
 
 /** Parse a numbered batch response into per-index categories. */
-export function parseBatchResponse(response: string, count: number, categories: readonly string[]): (string | null)[] {
+export function parseBatchResponse(
+  response: string,
+  count: number,
+  categories: readonly string[]
+): (string | null)[] {
   const results: (string | null)[] = new Array(count).fill(null);
   const lines = response.split('\n');
   for (const line of lines) {
@@ -168,9 +175,14 @@ Reply with ONLY the comma-separated list, nothing else.`;
  *  falls back to the last category when nothing else fits. */
 export function parseCategoryList(response: string): string[] {
   const names = response
-    .replace(/^[^:]*:\s*/, '')       // strip a leading "Categories:" style prefix
+    .replace(/^[^:]*:\s*/, '') // strip a leading "Categories:" style prefix
     .split(/[,，、\n]/)
-    .map((s) => s.trim().replace(/^[-•\d.)\s]+/, '').replace(/['"]/g, ''))
+    .map((s) =>
+      s
+        .trim()
+        .replace(/^[-•\d.)\s]+/, '')
+        .replace(/['"]/g, '')
+    )
     .filter(Boolean);
   const deduped = Array.from(new Set(names));
   const hasCatchAll = deduped.some((n) => /^(other|其他|else|misc)/i.test(n));
@@ -216,7 +228,11 @@ export class GeminiNanoClassifier {
   }
 
   /** Classify a tab using Gemini Nano */
-  async classify(url: string, title: string, categories: readonly string[] = CATEGORIES): Promise<ClassificationResult> {
+  async classify(
+    url: string,
+    title: string,
+    categories: readonly string[] = CATEGORIES
+  ): Promise<ClassificationResult> {
     if (!this.isReady() || !this.session) {
       return {
         category: 'Other',
@@ -266,12 +282,14 @@ export class GeminiNanoClassifier {
       const response = await this.session.prompt(prompt);
       const cats = parseBatchResponse(response, tabs.length, categories);
       // If parsing yielded nothing usable, fall back to per-tab classification.
-      if (cats.every(c => c === null)) {
+      if (cats.every((c) => c === null)) {
         return this.classifyEach(tabs, categories);
       }
-      return cats.map(c => c
-        ? { category: c, confidence: AI_CONFIDENCE.SUCCESS, source: 'ai' as const }
-        : { category: 'Other', confidence: AI_CONFIDENCE.LOW, source: 'ai' as const });
+      return cats.map((c) =>
+        c
+          ? { category: c, confidence: AI_CONFIDENCE.SUCCESS, source: 'ai' as const }
+          : { category: 'Other', confidence: AI_CONFIDENCE.LOW, source: 'ai' as const }
+      );
     } catch {
       return this.classifyEach(tabs, categories);
     }
@@ -302,14 +320,5 @@ export class GeminiNanoClassifier {
       results.push(await this.classify(tab.url, tab.title, categories));
     }
     return results;
-  }
-
-  /** Destroy the session */
-  destroy(): void {
-    if (this.session?.destroy) {
-      this.session.destroy();
-    }
-    this.session = null;
-    this.available = false;
   }
 }

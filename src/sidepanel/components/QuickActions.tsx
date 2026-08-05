@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { formatMemoryEstimate } from '../../shared/format';
+import { sendMessage } from '../utils';
 
 interface QuickActionsProps {
   onRefresh: () => void;
@@ -22,7 +23,7 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
     // Check AI availability upfront so the custom-group input can be
     // disabled with a clear reason instead of letting the user type an
     // instruction and only discover it can't run after clicking "Group".
-    chrome.runtime.sendMessage({ action: 'isAiReady' })
+    sendMessage<boolean>({ action: 'isAiReady' })
       .then((ready) => setAiReady(!!ready))
       .catch(() => setAiReady(false));
   }, []);
@@ -36,15 +37,14 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
   // OneTab style: collapse all tabs into a single list
   async function handleCollapseAll() {
     const tabs = await chrome.tabs.query({ currentWindow: true });
-    const activeTab = tabs.find(t => t.active);
-    const toCollapse = tabs.filter(t => !t.active && t.url);
+    const toCollapse = tabs.filter((t) => !t.active && t.url);
 
     if (toCollapse.length === 0) return;
 
     // Save URLs to storage
     const saved = await chrome.storage.local.get('collapsedTabs');
     const existing = saved.collapsedTabs || [];
-    const newEntries = toCollapse.map(t => ({
+    const newEntries = toCollapse.map((t) => ({
       url: t.url,
       title: t.title,
       favIconUrl: t.favIconUrl,
@@ -92,7 +92,7 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
   // audible, chrome://, hibernation timeout) and updates the same stats
   // counter as the alarm-driven auto-hibernate and the context menu action.
   async function handleHibernateAll() {
-    await chrome.runtime.sendMessage({ action: 'hibernateAll' });
+    await sendMessage({ action: 'hibernateAll' });
     await updateStats();
     onRefresh();
   }
@@ -101,7 +101,7 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
   // "which tab to keep" heuristic and the totalDuplicatesClosed stat stay in
   // sync with the context menu / keyboard-shortcut / auto-close code paths.
   async function handleCloseDuplicates() {
-    await chrome.runtime.sendMessage({ action: 'closeDuplicates' });
+    await sendMessage({ action: 'closeDuplicates' });
     await updateStats();
     onRefresh();
   }
@@ -110,13 +110,11 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
   async function handleCloseOld(days: number) {
     const tabs = await chrome.tabs.query({ currentWindow: true });
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    let closed = 0;
 
     for (const tab of tabs) {
       if (!tab.active && tab.id && (tab.lastAccessed || 0) < cutoff) {
         try {
           await chrome.tabs.remove(tab.id);
-          closed++;
         } catch {}
       }
     }
@@ -128,7 +126,7 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
   // Close all tabs to the right of active
   async function handleCloseRight() {
     const tabs = await chrome.tabs.query({ currentWindow: true });
-    const activeIdx = tabs.findIndex(t => t.active);
+    const activeIdx = tabs.findIndex((t) => t.active);
     if (activeIdx === -1) return;
 
     for (let i = activeIdx + 1; i < tabs.length; i++) {
@@ -143,11 +141,21 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
   async function handleConfirm(action: string) {
     setShowConfirm(null);
     switch (action) {
-      case 'collapse': await handleCollapseAll(); break;
-      case 'hibernate': await handleHibernateAll(); break;
-      case 'duplicates': await handleCloseDuplicates(); break;
-      case 'old7': await handleCloseOld(7); break;
-      case 'old30': await handleCloseOld(30); break;
+      case 'collapse':
+        await handleCollapseAll();
+        break;
+      case 'hibernate':
+        await handleHibernateAll();
+        break;
+      case 'duplicates':
+        await handleCloseDuplicates();
+        break;
+      case 'old7':
+        await handleCloseOld(7);
+        break;
+      case 'old30':
+        await handleCloseOld(30);
+        break;
     }
   }
 
@@ -164,8 +172,11 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
     setCustomBusy(true);
     setCustomStatus('');
     try {
-      const result = await chrome.runtime.sendMessage({ action: 'previewCustomCategories', instruction });
-      if (result?.error) throw new Error(result.error);
+      const result = await sendMessage<string[] | { error: string }>({
+        action: 'previewCustomCategories',
+        instruction,
+      });
+      if (!Array.isArray(result)) throw new Error(result.error);
       setPreviewCategories(result);
     } catch (err: any) {
       setCustomStatus(describeCustomGroupError(err));
@@ -180,8 +191,10 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
     setPreviewCategories(null);
     try {
       const instruction = customInstruction.trim();
-      const result = await chrome.runtime.sendMessage({ action: 'smartGroupCustom', instruction, categories });
-      if (result?.error) throw new Error(result.error);
+      const result = await sendMessage<
+        { grouped: number; categories: string[] } | { error: string }
+      >({ action: 'smartGroupCustom', instruction, categories });
+      if ('error' in result) throw new Error(result.error);
       setCustomStatus(`Grouped into: ${result.categories.join(', ')} (${result.grouped} tabs)`);
       await updateStats();
       onRefresh();
@@ -221,7 +234,9 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
                 placeholder="e.g. 整体分为 AI、工作、交流、开发、其他"
                 value={customInstruction}
                 onChange={(e) => setCustomInstruction(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleCustomPreview(); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCustomPreview();
+                }}
                 disabled={customBusy || aiReady === null}
               />
               <button
@@ -306,7 +321,9 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
             <p>Group tabs into these categories?</p>
             <div className="custom-group-chips">
               {previewCategories.map((c) => (
-                <span key={c} className="custom-group-chip">{c}</span>
+                <span key={c} className="custom-group-chip">
+                  {c}
+                </span>
               ))}
             </div>
             <div className="confirm-actions">
@@ -326,12 +343,18 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
 
 function getConfirmMessage(action: string): string {
   switch (action) {
-    case 'collapse': return 'Collapse all inactive tabs? They\'ll be saved and can be restored later.';
-    case 'hibernate': return 'Hibernate all inactive tabs? This frees up memory.';
-    case 'duplicates': return 'Close all duplicate tabs?';
-    case 'old7': return 'Close tabs not accessed in the last 7 days?';
-    case 'old30': return 'Close tabs not accessed in the last 30 days?';
-    default: return 'Are you sure?';
+    case 'collapse':
+      return "Collapse all inactive tabs? They'll be saved and can be restored later.";
+    case 'hibernate':
+      return 'Hibernate all inactive tabs? This frees up memory.';
+    case 'duplicates':
+      return 'Close all duplicate tabs?';
+    case 'old7':
+      return 'Close tabs not accessed in the last 7 days?';
+    case 'old30':
+      return 'Close tabs not accessed in the last 30 days?';
+    default:
+      return 'Are you sure?';
   }
 }
 
@@ -340,5 +363,3 @@ function describeCustomGroupError(err: any): string {
     ? "This needs on-device AI (Gemini Nano), which isn't available right now."
     : 'Could not understand that instruction — try rephrasing.';
 }
-
-

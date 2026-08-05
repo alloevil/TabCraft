@@ -39,9 +39,9 @@ export function TreeView({ onRefresh }: { onRefresh: () => void }) {
   }
 
   function toggleDomain(domain: string) {
-    setDomains(prev => prev.map(d =>
-      d.domain === domain ? { ...d, collapsed: !d.collapsed } : d
-    ));
+    setDomains((prev) =>
+      prev.map((d) => (d.domain === domain ? { ...d, collapsed: !d.collapsed } : d))
+    );
   }
 
   async function handleTabClick(tabId: number) {
@@ -56,7 +56,7 @@ export function TreeView({ onRefresh }: { onRefresh: () => void }) {
   }
 
   async function handleCloseDomain(domain: string) {
-    const node = domains.find(d => d.domain === domain);
+    const node = domains.find((d) => d.domain === domain);
     if (!node) return;
     for (const tab of node.tabs) {
       if (tab.id) await chrome.tabs.remove(tab.id);
@@ -66,28 +66,31 @@ export function TreeView({ onRefresh }: { onRefresh: () => void }) {
   }
 
   async function handleHibernateDomain(domain: string) {
-    const node = domains.find(d => d.domain === domain);
+    const node = domains.find((d) => d.domain === domain);
     if (!node) return;
     for (const tab of node.tabs) {
       if (tab.id && !tab.active) {
-        try { await chrome.tabs.discard(tab.id); } catch {}
+        try {
+          await chrome.tabs.discard(tab.id);
+        } catch {}
       }
     }
     await loadTree();
   }
 
   async function handleCollapseAll() {
-    setDomains(prev => prev.map(d => ({ ...d, collapsed: true })));
+    setDomains((prev) => prev.map((d) => ({ ...d, collapsed: true })));
   }
 
   async function handleExpandAll() {
-    setDomains(prev => prev.map(d => ({ ...d, collapsed: false })));
+    setDomains((prev) => prev.map((d) => ({ ...d, collapsed: false })));
   }
 
   const filtered = searchQuery
-    ? domains.filter(d =>
-        d.domain.includes(searchQuery.toLowerCase()) ||
-        d.tabs.some(t => t.title?.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? domains.filter(
+        (d) =>
+          d.domain.includes(searchQuery.toLowerCase()) ||
+          d.tabs.some((t) => t.title?.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     : domains;
 
@@ -105,8 +108,12 @@ export function TreeView({ onRefresh }: { onRefresh: () => void }) {
           className="search-input"
         />
         <div className="tree-toolbar-actions">
-          <button className="tab-action-btn" onClick={handleCollapseAll} title="Collapse all">⊟</button>
-          <button className="tab-action-btn" onClick={handleExpandAll} title="Expand all">⊞</button>
+          <button className="tab-action-btn" onClick={handleCollapseAll} title="Collapse all">
+            ⊟
+          </button>
+          <button className="tab-action-btn" onClick={handleExpandAll} title="Expand all">
+            ⊞
+          </button>
         </div>
       </div>
 
@@ -119,41 +126,50 @@ export function TreeView({ onRefresh }: { onRefresh: () => void }) {
 
       {/* Tree */}
       <div className="tree-list">
-        {filtered.map(node => (
+        {filtered.map((node) => (
           <div key={node.domain} className="tree-domain">
-            <div
-              className="tree-domain-header"
-              onClick={() => toggleDomain(node.domain)}
-            >
-              <span className="tree-collapse-icon">
-                {node.collapsed ? '▶' : '▼'}
-              </span>
-              {getFavicon(node.domain) && (
+            <div className="tree-domain-header" onClick={() => toggleDomain(node.domain)}>
+              <span className="tree-collapse-icon">{node.collapsed ? '▶' : '▼'}</span>
+              {getFavicon(node) ? (
                 <img
-                  src={getFavicon(node.domain)}
+                  src={getFavicon(node)}
                   className="tree-favicon"
                   alt=""
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
+              ) : (
+                <span className="tree-tab-favicon-placeholder">·</span>
               )}
               <span className="tree-domain-name">{node.domain}</span>
               <span className="tree-domain-count">{node.tabs.length}</span>
               <div className="tree-domain-actions">
                 <button
                   className="tab-action-btn"
-                  onClick={(e) => { e.stopPropagation(); handleHibernateDomain(node.domain); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleHibernateDomain(node.domain);
+                  }}
                   title="Hibernate all"
-                >💤</button>
+                >
+                  💤
+                </button>
                 <button
                   className="tab-action-btn danger"
-                  onClick={(e) => { e.stopPropagation(); handleCloseDomain(node.domain); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCloseDomain(node.domain);
+                  }}
                   title="Close all"
-                >✕</button>
+                >
+                  ✕
+                </button>
               </div>
             </div>
             {!node.collapsed && (
               <div className="tree-tabs">
-                {node.tabs.map(tab => (
+                {node.tabs.map((tab) => (
                   <div
                     key={tab.id}
                     className={`tree-tab ${tab.active ? 'active' : ''} ${tab.discarded ? 'discarded' : ''}`}
@@ -166,10 +182,9 @@ export function TreeView({ onRefresh }: { onRefresh: () => void }) {
                     )}
                     <span className="tree-tab-title">{tab.title || 'Untitled'}</span>
                     {tab.discarded && <span className="tab-badge dormant">💤</span>}
-                    <button
-                      className="tree-tab-close"
-                      onClick={(e) => handleCloseTab(e, tab.id!)}
-                    >✕</button>
+                    <button className="tree-tab-close" onClick={(e) => handleCloseTab(e, tab.id!)}>
+                      ✕
+                    </button>
                   </div>
                 ))}
               </div>
@@ -181,6 +196,10 @@ export function TreeView({ onRefresh }: { onRefresh: () => void }) {
   );
 }
 
-function getFavicon(domain: string): string {
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+/** Favicon for a domain node — reuse a favicon Chrome already fetched for
+ *  one of the domain's own tabs. Deliberately NOT an external favicon
+ *  service: shipping every browsed domain to a third party would contradict
+ *  the "nothing leaves the device" privacy promise. */
+function getFavicon(node: DomainNode): string | undefined {
+  return node.tabs.find((t) => t.favIconUrl)?.favIconUrl;
 }

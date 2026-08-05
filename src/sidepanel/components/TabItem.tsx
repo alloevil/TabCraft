@@ -24,9 +24,14 @@ export function TabItem({ tab, onHibernate, onClose }: TabItemProps) {
       title={tab.url}
     >
       {tab.favIconUrl ? (
-        <img src={tab.favIconUrl} className="tab-favicon" alt="" onError={(e) => {
-          (e.target as HTMLImageElement).style.display = 'none';
-        }} />
+        <img
+          src={tab.favIconUrl}
+          className="tab-favicon"
+          alt=""
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
       ) : (
         <span className="tab-favicon-placeholder">🌐</span>
       )}
@@ -36,7 +41,10 @@ export function TabItem({ tab, onHibernate, onClose }: TabItemProps) {
         {!isActive && !isDiscarded && onHibernate && (
           <button
             className="tab-action-btn"
-            onClick={(e) => { e.stopPropagation(); onHibernate(tab.id!); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onHibernate(tab.id!);
+            }}
             title="Hibernate this tab"
           >
             💤
@@ -45,7 +53,10 @@ export function TabItem({ tab, onHibernate, onClose }: TabItemProps) {
         {onClose && (
           <button
             className="tab-action-btn danger"
-            onClick={(e) => { e.stopPropagation(); onClose(tab.id!); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose(tab.id!);
+            }}
             title="Close this tab"
           >
             ✕

@@ -32,8 +32,8 @@ export function DashboardView() {
       chrome.storage.local.get('stats'),
     ]);
 
-    const activeTabs = tabs.filter(t => !t.discarded);
-    const hibernatedTabs = tabs.filter(t => t.discarded);
+    const activeTabs = tabs.filter((t) => !t.discarded);
+    const hibernatedTabs = tabs.filter((t) => t.discarded);
 
     // Domain breakdown
     const domainMap = new Map<string, number>();
@@ -59,7 +59,11 @@ export function DashboardView() {
       .map(([category, count]) => ({ category, count }))
       .sort((a, b) => b.count - a.count);
 
-    const stats = storageStats.stats || { totalGrouped: 0, totalHibernated: 0, totalDuplicatesClosed: 0 };
+    const stats = storageStats.stats || {
+      totalGrouped: 0,
+      totalHibernated: 0,
+      totalDuplicatesClosed: 0,
+    };
 
     setData({
       totalTabs: tabs.length,
@@ -78,9 +82,10 @@ export function DashboardView() {
   // Note: actual memory savings vary by tab content and browser state
   // This is a rough estimate for display purposes only
   const memorySavedMB = data.hibernatedTabs * 50;
-  const memorySaved = memorySavedMB > 1024
-    ? `${(memorySavedMB / 1024).toFixed(1)} GB`
-    : `${memorySavedMB.toFixed(0)} MB`;
+  const memorySaved =
+    memorySavedMB > 1024
+      ? `${(memorySavedMB / 1024).toFixed(1)} GB`
+      : `${memorySavedMB.toFixed(0)} MB`;
 
   return (
     <div className="dashboard-view">
@@ -126,7 +131,9 @@ export function DashboardView() {
           </div>
           <div className="lifetime-row">
             <span>Duplicates closed</span>
-            <span className="lifetime-value">{data.stats.totalDuplicatesClosed.toLocaleString()}</span>
+            <span className="lifetime-value">
+              {data.stats.totalDuplicatesClosed.toLocaleString()}
+            </span>
           </div>
         </div>
       </div>

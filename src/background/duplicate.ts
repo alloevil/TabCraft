@@ -39,20 +39,16 @@ export function normalizeUrl(url: string): string {
   }
 }
 
-/** Check if two URLs are duplicates */
-export function areDuplicates(url1: string, url2: string): boolean {
-  // Exact match
-  if (url1 === url2) return true;
-
-  // Normalized match
-  return normalizeUrl(url1) === normalizeUrl(url2);
-}
-
-/** Find duplicate groups from a list of tabs */
-export function findDuplicateGroups(
-  tabs: Array<{ id: number; url: string; title: string; lastAccessed?: number }>
-): Array<{ normalizedUrl: string; tabs: typeof tabs }> {
-  const groups = new Map<string, typeof tabs>();
+/** Find duplicate groups from a list of tabs. Generic so it works on raw
+ *  chrome.tabs.Tab as well as any wrapper carrying `url`/`lastAccessed` —
+ *  this is the single grouping implementation shared by the background
+ *  auto-close scan, TabManager.findDuplicates, and the Dedup view. Tabs
+ *  without a URL and chrome:// pages never count as duplicates. Groups come
+ *  back largest-first; tabs within a group most-recently-used first. */
+export function findDuplicateGroups<T extends { url?: string; lastAccessed?: number }>(
+  tabs: T[]
+): Array<{ normalizedUrl: string; tabs: T[] }> {
+  const groups = new Map<string, T[]>();
 
   for (const tab of tabs) {
     if (!tab.url || tab.url.startsWith('chrome://')) continue;
@@ -67,22 +63,17 @@ export function findDuplicateGroups(
     .map(([normalizedUrl, tabs]) => ({
       normalizedUrl,
       tabs: tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0)),
-    }));
+    }))
+    .sort((a, b) => b.tabs.length - a.tabs.length);
 }
 
-/** Get the "best" tab to keep from a duplicate group (most recently active) */
-export function getBestTab(
-  tabs: Array<{ id: number; lastAccessed?: number }>
-): typeof tabs[0] {
+/** The tab to KEEP from a duplicate group: the currently active one if any,
+ *  else the most recently accessed. Shared by auto-close, closeDuplicates,
+ *  and the Dedup view's auto-selection so "which tab survives" is one rule. */
+export function getBestTab<T extends { active?: boolean; lastAccessed?: number }>(tabs: T[]): T {
+  const active = tabs.find((t) => t.active);
+  if (active) return active;
   return tabs.reduce((best, current) =>
     (current.lastAccessed || 0) > (best.lastAccessed || 0) ? current : best
   );
-}
-
-/** Count total duplicates (excluding the one to keep) */
-export function countDuplicates(
-  tabs: Array<{ id: number; url: string }>
-): number {
-  const groups = findDuplicateGroups(tabs as any);
-  return groups.reduce((sum, group) => sum + group.tabs.length - 1, 0);
 }

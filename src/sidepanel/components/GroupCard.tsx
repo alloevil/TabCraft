@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { TabItem } from './TabItem';
+import { sendMessage } from '../utils';
 
 interface GroupCardProps {
   group?: chrome.tabGroups.TabGroup;
@@ -24,12 +25,14 @@ export function GroupCard({ group, tabs, onRefresh }: GroupCardProps) {
   async function handleSnoozeGroup() {
     // Persist every tab BEFORE closing it, so snoozing is recoverable rather
     // than a silent close. Records land in storage (`snoozed`) keyed per tab.
-    const ok = confirm(`Snooze "${group?.title || 'group'}"? Its ${tabs.length} tab(s) will close and can be restored later.`);
+    const ok = confirm(
+      `Snooze "${group?.title || 'group'}"? Its ${tabs.length} tab(s) will close and can be restored later.`
+    );
     if (!ok) return;
     const now = Date.now();
     for (const tab of tabs) {
       if (!tab.url) continue;
-      await chrome.runtime.sendMessage({
+      await sendMessage({
         action: 'snoozeTab',
         record: {
           id: `sn_${now}_${tab.id ?? Math.floor(now % 100000)}`,
@@ -66,14 +69,20 @@ export function GroupCard({ group, tabs, onRefresh }: GroupCardProps) {
           <div className="group-header-actions">
             <button
               className="tab-action-btn"
-              onClick={(e) => { e.stopPropagation(); handleUngroupAll(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleUngroupAll();
+              }}
               title="Ungroup all tabs"
             >
               ⊘
             </button>
             <button
               className="tab-action-btn"
-              onClick={(e) => { e.stopPropagation(); handleSnoozeGroup(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSnoozeGroup();
+              }}
               title="Snooze group"
             >
               ⏰
@@ -83,7 +92,7 @@ export function GroupCard({ group, tabs, onRefresh }: GroupCardProps) {
       </div>
       {!collapsed && (
         <div className="group-tabs">
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <TabItem key={tab.id} tab={tab} />
           ))}
         </div>

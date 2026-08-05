@@ -2,7 +2,7 @@
 // Handles all data persistence via chrome.storage.local
 
 import type { StorageSchema, Settings, DomainRule, Workspace, SnoozeRecord } from '../shared/types';
-import { STORAGE_KEYS, DEFAULT_SETTINGS, MAX_UNDO_HISTORY, MAX_LEARNED_MAPPINGS } from '../shared/constants';
+import { DEFAULT_SETTINGS, MAX_UNDO_HISTORY, MAX_LEARNED_MAPPINGS } from '../shared/constants';
 
 /** Raw storage key for undo snapshots (intentionally outside StorageSchema). */
 const UNDO_KEY = 'undoStack';
@@ -55,8 +55,30 @@ function withLock<T>(lockKey: string, fn: () => Promise<T>): Promise<T> {
   const run = prevTail.then(fn, fn);
   // The stored tail must always settle (never reject) so a failed operation
   // doesn't permanently jam the queue for later calls on the same key.
-  keyLocks.set(lockKey, run.then(() => undefined, () => undefined));
+  keyLocks.set(
+    lockKey,
+    run.then(
+      () => undefined,
+      () => undefined
+    )
+  );
   return run;
+}
+
+/** In-memory settings memo. Settings are read on nearly every tab event
+ *  (auto-group, learn, hibernation) — caching avoids a storage round-trip
+ *  per event. Kept coherent two ways: updateSettings() writes through, and
+ *  the onChanged listener below catches direct chrome.storage writes from
+ *  the side panel. */
+let settingsMemo: Settings | null = null;
+
+// Guarded: unit tests mock chrome.storage.local without onChanged.
+if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.settings) {
+      settingsMemo = (changes.settings.newValue as Settings | undefined) ?? null;
+    }
+  });
 }
 
 /** Storage manager singleton */
@@ -72,13 +94,17 @@ export const Storage = {
   // ── Settings ──────────────────────────────────────────────
 
   async getSettings(): Promise<Settings> {
-    return (await get('settings')) ?? DEFAULT_SETTINGS;
+    if (settingsMemo) return settingsMemo;
+    settingsMemo = (await get('settings')) ?? DEFAULT_SETTINGS;
+    return settingsMemo;
   },
 
   async updateSettings(partial: Partial<Settings>): Promise<void> {
     return withLock('settings', async () => {
       const current = await this.getSettings();
-      await set('settings', { ...current, ...partial });
+      const next = { ...current, ...partial };
+      settingsMemo = next;
+      await set('settings', next);
     });
   },
 
@@ -103,7 +129,7 @@ export const Storage = {
   async updateRule(id: string, updates: Partial<DomainRule>): Promise<void> {
     return withLock('rules', async () => {
       const rules = await this.getRules();
-      const idx = rules.findIndex(r => r.id === id);
+      const idx = rules.findIndex((r) => r.id === id);
       if (idx >= 0) {
         rules[idx] = { ...rules[idx], ...updates, updatedAt: Date.now() };
         await set('rules', rules);
@@ -114,7 +140,10 @@ export const Storage = {
   async deleteRule(id: string): Promise<void> {
     return withLock('rules', async () => {
       const rules = await this.getRules();
-      await set('rules', rules.filter(r => r.id !== id));
+      await set(
+        'rules',
+        rules.filter((r) => r.id !== id)
+      );
     });
   },
 
@@ -127,7 +156,7 @@ export const Storage = {
   async saveWorkspace(workspace: Workspace): Promise<void> {
     return withLock('workspaces', async () => {
       const workspaces = await this.getWorkspaces();
-      const idx = workspaces.findIndex(w => w.id === workspace.id);
+      const idx = workspaces.findIndex((w) => w.id === workspace.id);
       if (idx >= 0) {
         workspaces[idx] = workspace;
       } else {
@@ -140,7 +169,10 @@ export const Storage = {
   async deleteWorkspace(id: string): Promise<void> {
     return withLock('workspaces', async () => {
       const workspaces = await this.getWorkspaces();
-      await set('workspaces', workspaces.filter(w => w.id !== id));
+      await set(
+        'workspaces',
+        workspaces.filter((w) => w.id !== id)
+      );
     });
   },
 
@@ -161,7 +193,10 @@ export const Storage = {
   async removeSnooze(id: string): Promise<void> {
     return withLock('snoozed', async () => {
       const snoozed = await this.getSnoozed();
-      await set('snoozed', snoozed.filter(s => s.id !== id));
+      await set(
+        'snoozed',
+        snoozed.filter((s) => s.id !== id)
+      );
     });
   },
 
@@ -185,7 +220,7 @@ export const Storage = {
       const mappings = await this.getLearnedMappings();
       for (const { domain, category } of entries) {
         if (!domain) continue;
-        delete mappings[domain];        // move to most-recently-used position
+        delete mappings[domain]; // move to most-recently-used position
         mappings[domain] = category;
       }
       const keys = Object.keys(mappings);
@@ -227,14 +262,19 @@ export const Storage = {
   // ── Stats ─────────────────────────────────────────────────
 
   async getStats() {
-    return (await get('stats')) ?? {
-      totalGrouped: 0,
-      totalHibernated: 0,
-      totalDuplicatesClosed: 0,
-    };
+    return (
+      (await get('stats')) ?? {
+        totalGrouped: 0,
+        totalHibernated: 0,
+        totalDuplicatesClosed: 0,
+      }
+    );
   },
 
-  async incrementStat(key: 'totalGrouped' | 'totalHibernated' | 'totalDuplicatesClosed', count = 1) {
+  async incrementStat(
+    key: 'totalGrouped' | 'totalHibernated' | 'totalDuplicatesClosed',
+    count = 1
+  ) {
     return withLock('stats', async () => {
       const stats = await this.getStats();
       stats[key] += count;

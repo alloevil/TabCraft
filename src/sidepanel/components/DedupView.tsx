@@ -1,17 +1,13 @@
 // TabCraft — Cross-Window Duplicate Detection & Merge
 
 import React, { useState, useEffect } from 'react';
-import { normalizeUrl } from '../../background/duplicate';
+import { findDuplicateGroups, getBestTab } from '../../background/duplicate';
 import { focusTab } from '../utils';
 
 interface DuplicateGroup {
   normalizedUrl: string;
   displayUrl: string;
-  tabs: Array<{
-    tab: chrome.tabs.Tab;
-    windowId: number;
-    windowTitle: string;
-  }>;
+  tabs: chrome.tabs.Tab[];
 }
 
 export function DedupView({ onRefresh }: { onRefresh: () => void }) {
@@ -29,66 +25,25 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
     setScanning(true);
     setSelected(new Map());
 
-    // Get all windows
+    // Collect all tabs across all windows — chrome.tabs.Tab already carries
+    // its windowId, so no wrapper is needed.
     const windows = await chrome.windows.getAll({ populate: true });
     setTotalWindows(windows.length);
-
-    // Collect all tabs across windows
-    const allTabs: Array<{
-      tab: chrome.tabs.Tab;
-      windowId: number;
-      windowTitle: string;
-    }> = [];
-
-    for (const win of windows) {
-      const winTitle = `Window ${win.id}`;
-      if (win.tabs) {
-        for (const tab of win.tabs) {
-          allTabs.push({ tab, windowId: win.id!, windowTitle: winTitle });
-        }
-      }
-    }
-
+    const allTabs = windows.flatMap((win) => win.tabs ?? []);
     setTotalTabs(allTabs.length);
 
-    // Group by normalized URL
-    const urlMap = new Map<string, typeof allTabs>();
-    for (const entry of allTabs) {
-      if (!entry.tab.url) continue;
-      const normalized = normalizeUrl(entry.tab.url);
-      if (!urlMap.has(normalized)) urlMap.set(normalized, []);
-      urlMap.get(normalized)!.push(entry);
-    }
-
-    // Filter to only duplicates (same URL in different windows OR same window)
-    const dupes: DuplicateGroup[] = [];
-    for (const [normalized, entries] of urlMap) {
-      // Must have 2+ tabs with same URL
-      if (entries.length < 2) continue;
-
-      // Check if they're in different windows or same window
-      const windowIds = new Set(entries.map(e => e.windowId));
-      // Include both: cross-window duplicates AND same-window duplicates
-      dupes.push({
-        normalizedUrl: normalized,
-        displayUrl: entries[0].tab.url || normalized,
-        tabs: entries,
-      });
-    }
-
-    // Sort by number of duplicates (most duplicates first)
-    dupes.sort((a, b) => b.tabs.length - a.tabs.length);
-
+    // Same grouping implementation as the background auto-close scan.
+    const dupes = findDuplicateGroups(allTabs).map((g) => ({
+      normalizedUrl: g.normalizedUrl,
+      displayUrl: g.tabs[0].url || g.normalizedUrl,
+      tabs: g.tabs,
+    }));
     setDuplicates(dupes);
 
-    // Auto-select: keep the active tab or the most recently accessed
+    // Auto-select which tab to keep — same rule as background auto-close.
     const autoSelect = new Map<string, number>();
     for (const group of dupes) {
-      const activeTab = group.tabs.find(t => t.tab.active);
-      const keepTab = activeTab || group.tabs.reduce((best, curr) =>
-        (curr.tab.lastAccessed || 0) > (best.tab.lastAccessed || 0) ? curr : best
-      );
-      autoSelect.set(group.normalizedUrl, keepTab.tab.id!);
+      autoSelect.set(group.normalizedUrl, getBestTab(group.tabs).id!);
     }
     setSelected(autoSelect);
 
@@ -96,7 +51,7 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
   }
 
   function toggleKeep(normalizedUrl: string, tabId: number) {
-    setSelected(prev => {
+    setSelected((prev) => {
       const next = new Map(prev);
       next.set(normalizedUrl, tabId);
       return next;
@@ -104,15 +59,13 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
   }
 
   async function handleMergeSelected() {
-    let closed = 0;
     for (const group of duplicates) {
       const keepId = selected.get(group.normalizedUrl);
       if (!keepId) continue;
-      for (const entry of group.tabs) {
-        if (entry.tab.id !== keepId && entry.tab.id) {
+      for (const tab of group.tabs) {
+        if (tab.id !== keepId && tab.id) {
           try {
-            await chrome.tabs.remove(entry.tab.id);
-            closed++;
+            await chrome.tabs.remove(tab.id);
           } catch {}
         }
       }
@@ -122,19 +75,13 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
   }
 
   async function handleMergeAll() {
-    // For each duplicate group, keep the "best" tab (active > most recent > first)
-    let closed = 0;
+    // For each duplicate group, keep the "best" tab (active > most recent)
     for (const group of duplicates) {
-      const activeTab = group.tabs.find(t => t.tab.active);
-      const keepTab = activeTab || group.tabs.reduce((best, curr) =>
-        (curr.tab.lastAccessed || 0) > (best.tab.lastAccessed || 0) ? curr : best
-      );
-
-      for (const entry of group.tabs) {
-        if (entry.tab.id !== keepTab.tab.id && entry.tab.id) {
+      const keep = getBestTab(group.tabs);
+      for (const tab of group.tabs) {
+        if (tab.id !== keep.id && tab.id) {
           try {
-            await chrome.tabs.remove(entry.tab.id);
-            closed++;
+            await chrome.tabs.remove(tab.id);
           } catch {}
         }
       }
@@ -143,34 +90,9 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
     onRefresh();
   }
 
-  async function handleBringTogether() {
-    // Move all duplicate tabs to the current window, then dedup
-    const currentWindow = await chrome.windows.getCurrent();
-    let closed = 0;
-
-    for (const group of duplicates) {
-      const keepId = selected.get(group.normalizedUrl);
-      if (!keepId) continue;
-
-      for (const entry of group.tabs) {
-        if (entry.tab.id === keepId) continue;
-        if (!entry.tab.id) continue;
-
-        // If in a different window, close it (we keep the selected one)
-        try {
-          await chrome.tabs.remove(entry.tab.id);
-          closed++;
-        } catch {}
-      }
-    }
-
-    await scanDuplicates();
-    onRefresh();
-  }
-
   const totalDuplicates = duplicates.reduce((sum, g) => sum + g.tabs.length - 1, 0);
-  const crossWindowDupes = duplicates.filter(g => {
-    const windowIds = new Set(g.tabs.map(t => t.windowId));
+  const crossWindowDupes = duplicates.filter((g) => {
+    const windowIds = new Set(g.tabs.map((t) => t.windowId));
     return windowIds.size > 1;
   });
 
@@ -198,10 +120,18 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
 
       {/* Actions */}
       <div className="dedup-actions">
-        <button className="btn btn-primary" onClick={handleMergeAll} disabled={duplicates.length === 0}>
+        <button
+          className="btn btn-primary"
+          onClick={handleMergeAll}
+          disabled={duplicates.length === 0}
+        >
           🔗 Merge All Duplicates
         </button>
-        <button className="btn btn-secondary" onClick={handleMergeSelected} disabled={duplicates.length === 0}>
+        <button
+          className="btn btn-secondary"
+          onClick={handleMergeSelected}
+          disabled={duplicates.length === 0}
+        >
           ✅ Merge Selected
         </button>
         <button className="btn btn-secondary" onClick={scanDuplicates} disabled={scanning}>
@@ -225,16 +155,19 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
         </div>
       ) : (
         <div className="dedup-list">
-          {duplicates.map(group => {
+          {duplicates.map((group) => {
             const keepId = selected.get(group.normalizedUrl);
-            const crossWindow = new Set(group.tabs.map(t => t.windowId)).size > 1;
+            const crossWindow = new Set(group.tabs.map((t) => t.windowId)).size > 1;
             // Common prefix shared by every real URL in this group — the part
             // after it is what actually differs and gets highlighted per tab.
-            const groupUrls = group.tabs.map(t => t.tab.url || '');
+            const groupUrls = group.tabs.map((t) => t.url || '');
             const commonPrefix = longestCommonPrefix(groupUrls);
 
             return (
-              <div key={group.normalizedUrl} className={`dedup-group ${crossWindow ? 'cross-window' : ''}`}>
+              <div
+                key={group.normalizedUrl}
+                className={`dedup-group ${crossWindow ? 'cross-window' : ''}`}
+              >
                 <div className="dedup-group-header">
                   <div className="dedup-group-info">
                     <span className="dedup-group-domain">{getCleanDomain(group.displayUrl)}</span>
@@ -246,39 +179,42 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
                   </div>
                 </div>
                 <div className="dedup-group-tabs">
-                  {group.tabs.map((entry) => {
-                    const fullUrl = entry.tab.url || '';
+                  {group.tabs.map((tab) => {
+                    const fullUrl = tab.url || '';
                     return (
-                    <div
-                      key={entry.tab.id}
-                      className={`dedup-tab ${entry.tab.id === keepId ? 'keep' : 'remove'}`}
-                      onClick={() => toggleKeep(group.normalizedUrl, entry.tab.id!)}
-                    >
-                      <div className="dedup-tab-main">
-                        <span className="dedup-tab-radio">
-                          {entry.tab.id === keepId ? '●' : '○'}
-                        </span>
-                        {entry.tab.favIconUrl && (
-                          <img src={entry.tab.favIconUrl} className="dedup-tab-favicon" alt="" />
-                        )}
-                        <span className="dedup-tab-title">{entry.tab.title || 'Untitled'}</span>
-                        <span className="dedup-tab-window">
-                          W{entry.windowId}
-                          {entry.tab.active && ' (active)'}
-                        </span>
-                        <button
-                          className="tab-action-btn"
-                          onClick={(e) => { e.stopPropagation(); focusTab(entry.tab); }}
-                          title="Jump to this tab"
-                        >
-                          ↗
-                        </button>
+                      <div
+                        key={tab.id}
+                        className={`dedup-tab ${tab.id === keepId ? 'keep' : 'remove'}`}
+                        onClick={() => toggleKeep(group.normalizedUrl, tab.id!)}
+                      >
+                        <div className="dedup-tab-main">
+                          <span className="dedup-tab-radio">{tab.id === keepId ? '●' : '○'}</span>
+                          {tab.favIconUrl && (
+                            <img src={tab.favIconUrl} className="dedup-tab-favicon" alt="" />
+                          )}
+                          <span className="dedup-tab-title">{tab.title || 'Untitled'}</span>
+                          <span className="dedup-tab-window">
+                            W{tab.windowId}
+                            {tab.active && ' (active)'}
+                          </span>
+                          <button
+                            className="tab-action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              focusTab(tab);
+                            }}
+                            title="Jump to this tab"
+                          >
+                            ↗
+                          </button>
+                        </div>
+                        <div className="dedup-tab-url" title={fullUrl}>
+                          <span className="dedup-url-common">{commonPrefix}</span>
+                          <span className="dedup-url-diff">
+                            {fullUrl.slice(commonPrefix.length) || '∅'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="dedup-tab-url" title={fullUrl}>
-                        <span className="dedup-url-common">{commonPrefix}</span>
-                        <span className="dedup-url-diff">{fullUrl.slice(commonPrefix.length) || '∅'}</span>
-                      </div>
-                    </div>
                     );
                   })}
                 </div>
@@ -290,7 +226,6 @@ export function DedupView({ onRefresh }: { onRefresh: () => void }) {
     </div>
   );
 }
-
 
 function getCleanDomain(url: string): string {
   try {

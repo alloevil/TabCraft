@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import type { Settings } from '../../shared/types';
 import { DEFAULT_SETTINGS, HIBERNATION_PRESETS, MIN_TABS_PRESETS } from '../../shared/constants';
 import { useT } from '../i18n';
+import { sendMessage } from '../utils';
 
 export function SettingsView() {
   const t = useT();
@@ -19,7 +20,7 @@ export function SettingsView() {
   }, []);
 
   function refreshLearnedCount() {
-    chrome.runtime.sendMessage({ action: 'learnedCount' })
+    sendMessage<number>({ action: 'learnedCount' })
       .then((n) => setLearnedCount(typeof n === 'number' ? n : 0))
       .catch(() => {});
   }
@@ -27,7 +28,7 @@ export function SettingsView() {
   async function handleClearLearned() {
     if (learnedCount === 0) return;
     if (!confirm(`Forget all ${learnedCount} learned domain mappings?`)) return;
-    await chrome.runtime.sendMessage({ action: 'clearLearned' }).catch(() => {});
+    await sendMessage({ action: 'clearLearned' }).catch(() => {});
     refreshLearnedCount();
   }
 
@@ -74,7 +75,7 @@ export function SettingsView() {
   }
 
   async function handleReset() {
-    if (confirm('Reset all settings to defaults? This won\'t delete your rules or workspaces.')) {
+    if (confirm("Reset all settings to defaults? This won't delete your rules or workspaces.")) {
       await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
       setSettings(DEFAULT_SETTINGS);
     }
@@ -159,8 +160,10 @@ export function SettingsView() {
             value={settings.minTabsPerGroup}
             onChange={(e) => update('minTabsPerGroup', Number(e.target.value))}
           >
-            {MIN_TABS_PRESETS.map(n => (
-              <option key={n} value={n}>{n} tabs</option>
+            {MIN_TABS_PRESETS.map((n) => (
+              <option key={n} value={n}>
+                {n} tabs
+              </option>
             ))}
           </select>
         </div>
@@ -245,8 +248,10 @@ export function SettingsView() {
             value={settings.hibernationTimeout}
             onChange={(e) => update('hibernationTimeout', Number(e.target.value))}
           >
-            {HIBERNATION_PRESETS.map(min => (
-              <option key={min} value={min}>{min} min</option>
+            {HIBERNATION_PRESETS.map((min) => (
+              <option key={min} value={min}>
+                {min} min
+              </option>
             ))}
           </select>
         </div>
@@ -275,9 +280,15 @@ export function SettingsView() {
       <div className="settings-section">
         <h3>Data</h3>
         <div className="settings-actions">
-          <button className="btn btn-secondary" onClick={handleExport}>📥 Export Settings</button>
-          <button className="btn btn-secondary" onClick={handleImport}>📤 Import Settings</button>
-          <button className="btn btn-danger" onClick={handleReset}>🔄 Reset to Defaults</button>
+          <button className="btn btn-secondary" onClick={handleExport}>
+            📥 Export Settings
+          </button>
+          <button className="btn btn-secondary" onClick={handleImport}>
+            📤 Import Settings
+          </button>
+          <button className="btn btn-danger" onClick={handleReset}>
+            🔄 Reset to Defaults
+          </button>
         </div>
       </div>
 

@@ -40,26 +40,31 @@ export function RulesView() {
 
   async function handleSave() {
     if (!editingId) return;
-    const updated = rules.map(r =>
-      r.id === editingId ? { ...r, domain: editDomain, category: editCategory, updatedAt: Date.now() } : r
+    const updated = rules.map((r) =>
+      r.id === editingId
+        ? { ...r, domain: editDomain, category: editCategory, updatedAt: Date.now() }
+        : r
     );
     await saveRules(updated);
     setEditingId(null);
   }
 
   async function handleDelete(id: string) {
-    const rule = rules.find(r => r.id === id);
+    const rule = rules.find((r) => r.id === id);
     if (rule?.source === 'seed') {
       if (!confirm('This is a built-in rule. Delete it?')) return;
     }
-    await saveRules(rules.filter(r => r.id !== id));
+    await saveRules(rules.filter((r) => r.id !== id));
   }
 
   async function handleAdd() {
     if (!newDomain.trim()) return;
     const rule: DomainRule = {
       id: `user_${Date.now()}`,
-      domain: newDomain.trim().toLowerCase().replace(/^www\./, ''),
+      domain: newDomain
+        .trim()
+        .toLowerCase()
+        .replace(/^www\./, ''),
       category: newCategory,
       source: 'user',
       createdAt: Date.now(),
@@ -80,21 +85,25 @@ export function RulesView() {
 
   // Filter and sort
   const filtered = rules
-    .filter(r => {
+    .filter((r) => {
       if (search && !r.domain.includes(search.toLowerCase())) return false;
       if (filterCategory && r.category !== filterCategory) return false;
       return true;
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case 'domain-asc': return a.domain.localeCompare(b.domain);
-        case 'domain-desc': return b.domain.localeCompare(a.domain);
-        case 'category-asc': return a.category.localeCompare(b.category);
-        case 'category-desc': return b.category.localeCompare(a.category);
+        case 'domain-asc':
+          return a.domain.localeCompare(b.domain);
+        case 'domain-desc':
+          return b.domain.localeCompare(a.domain);
+        case 'category-asc':
+          return a.category.localeCompare(b.category);
+        case 'category-desc':
+          return b.category.localeCompare(a.category);
       }
     });
 
-  const categories = [...new Set(rules.map(r => r.category))].sort();
+  const categories = [...new Set(rules.map((r) => r.category))].sort();
 
   return (
     <div className="rules-view">
@@ -113,7 +122,11 @@ export function RulesView() {
           onChange={(e) => setFilterCategory(e.target.value)}
         >
           <option value="">All categories</option>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
         </select>
         <select
           className="setting-select"
@@ -131,9 +144,13 @@ export function RulesView() {
       <div className="rules-stats">
         <span>{filtered.length} rules</span>
         <span className="rules-stats-breakdown">
-          {categories.map(c => {
-            const count = rules.filter(r => r.category === c).length;
-            return <span key={c} className="rule-badge">{c} ({count})</span>;
+          {categories.map((c) => {
+            const count = rules.filter((r) => r.category === c).length;
+            return (
+              <span key={c} className="rule-badge">
+                {c} ({count})
+              </span>
+            );
           })}
         </span>
       </div>
@@ -150,7 +167,7 @@ export function RulesView() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(rule => (
+            {filtered.map((rule) => (
               <tr key={rule.id} className={editingId === rule.id ? 'editing' : ''}>
                 {editingId === rule.id ? (
                   <>
@@ -167,23 +184,53 @@ export function RulesView() {
                         value={editCategory}
                         onChange={(e) => setEditCategory(e.target.value)}
                       >
-                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        {CATEGORIES.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
                       </select>
                     </td>
-                    <td><span className={`source-badge ${rule.source}`}>{rule.source}</span></td>
                     <td>
-                      <button className="tab-action-btn" onClick={handleSave} title="Save">✓</button>
-                      <button className="tab-action-btn" onClick={() => setEditingId(null)} title="Cancel">✕</button>
+                      <span className={`source-badge ${rule.source}`}>{rule.source}</span>
+                    </td>
+                    <td>
+                      <button className="tab-action-btn" onClick={handleSave} title="Save">
+                        ✓
+                      </button>
+                      <button
+                        className="tab-action-btn"
+                        onClick={() => setEditingId(null)}
+                        title="Cancel"
+                      >
+                        ✕
+                      </button>
                     </td>
                   </>
                 ) : (
                   <>
                     <td className="domain-cell">{rule.domain}</td>
-                    <td><span className="category-pill">{rule.category}</span></td>
-                    <td><span className={`source-badge ${rule.source}`}>{rule.source}</span></td>
                     <td>
-                      <button className="tab-action-btn" onClick={() => handleEdit(rule)} title="Edit">✏️</button>
-                      <button className="tab-action-btn danger" onClick={() => handleDelete(rule.id)} title="Delete">🗑️</button>
+                      <span className="category-pill">{rule.category}</span>
+                    </td>
+                    <td>
+                      <span className={`source-badge ${rule.source}`}>{rule.source}</span>
+                    </td>
+                    <td>
+                      <button
+                        className="tab-action-btn"
+                        onClick={() => handleEdit(rule)}
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        className="tab-action-btn danger"
+                        onClick={() => handleDelete(rule.id)}
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
                     </td>
                   </>
                 )}
@@ -208,15 +255,27 @@ export function RulesView() {
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
           >
-            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
-          <button className="btn btn-primary" onClick={handleAdd}>Add</button>
-          <button className="btn btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleAdd}>
+            Add
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowAdd(false)}>
+            Cancel
+          </button>
         </div>
       ) : (
         <div className="rules-footer">
-          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Add Rule</button>
-          <button className="btn btn-danger" onClick={handleReset}>Reset to Defaults</button>
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+            + Add Rule
+          </button>
+          <button className="btn btn-danger" onClick={handleReset}>
+            Reset to Defaults
+          </button>
         </div>
       )}
     </div>

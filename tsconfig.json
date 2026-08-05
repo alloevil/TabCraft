@@ -16,23 +16,11 @@
     "sourceMap": true,
     "outDir": "build",
     "rootDir": "src",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     }
   },
-  "include": [
-    ".plasmo/index.d.ts",
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "build"
-  ]
+  "include": [".plasmo/index.d.ts", "src/**/*"],
+  "exclude": ["node_modules", "build"]
 }

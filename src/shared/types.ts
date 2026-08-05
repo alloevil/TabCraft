@@ -1,5 +1,10 @@
 // TabCraft — Shared Types
 
+/** Timer handle for the running environment (browser: number; Node lib
+ *  types under vitest: Timeout). Named once here so consumers don't each
+ *  re-derive it from setTimeout's signature. */
+export type TimerHandle = ReturnType<typeof setTimeout>;
+
 /** A browser tab with extended metadata */
 export interface TabInfo {
   id: number;
@@ -10,15 +15,15 @@ export interface TabInfo {
   groupId?: number;
   pinned: boolean;
   active: boolean;
-  lastAccessed: number;       // timestamp
-  createdAt: number;          // timestamp
-  discarded: boolean;         // hibernated?
+  lastAccessed: number; // timestamp
+  createdAt: number; // timestamp
+  discarded: boolean; // hibernated?
   status: string;
 }
 
 /** A group of tabs */
 export interface TabGroup {
-  id: string;                 // uuid
+  id: string; // uuid
   name: string;
   color: chrome.tabGroups.ColorEnum;
   collapsed: boolean;
@@ -49,7 +54,7 @@ export interface Settings {
   autoCloseDuplicates: boolean;
   showDuplicateBadge: boolean;
   groupingMode: 'smart' | 'domain';
-  hibernationTimeout: number;     // minutes
+  hibernationTimeout: number; // minutes
   theme: 'system' | 'light' | 'dark';
   aiProvider: 'gemini-nano' | 'rule-engine';
   learnFromActivity: boolean;
@@ -70,7 +75,7 @@ export interface SnoozeRecord {
   groupId?: number;
   url: string;
   title: string;
-  wakeAt: number;             // timestamp
+  wakeAt: number; // timestamp
   createdAt: number;
 }
 
@@ -103,7 +108,7 @@ export interface StorageSchema {
   rules: DomainRule[];
   workspaces: Workspace[];
   snoozed: SnoozeRecord[];
-  learnedMappings: Record<string, string>;  // domain -> category
+  learnedMappings: Record<string, string>; // domain -> category
   sessionSnapshot?: Workspace;
   stats: {
     totalGrouped: number;
@@ -138,39 +143,46 @@ export const CATEGORIES = [
   'Other',
 ] as const;
 
-export type CategoryName = typeof CATEGORIES[number];
+export type CategoryName = (typeof CATEGORIES)[number];
 
 /** Group color palette */
 export const GROUP_COLORS: chrome.tabGroups.ColorEnum[] = [
-  'blue', 'red', 'yellow', 'green', 'pink',
-  'purple', 'cyan', 'orange', 'grey',
+  'blue',
+  'red',
+  'yellow',
+  'green',
+  'pink',
+  'purple',
+  'cyan',
+  'orange',
+  'grey',
 ];
 
 /** Stable category → color map. A given category always gets the same color
  *  across re-groupings, so users build muscle memory. Categories not listed
  *  here fall back to a deterministic hash of their name (see colorForCategory). */
 export const CATEGORY_COLORS: Record<string, chrome.tabGroups.ColorEnum> = {
-  'Development': 'blue',
+  Development: 'blue',
   'AI & ML': 'purple',
   'Cloud & DevOps': 'cyan',
-  'Social': 'pink',
-  'Work': 'green',
-  'Communication': 'green',
-  'Shopping': 'orange',
-  'Finance': 'green',
-  'News': 'red',
-  'Entertainment': 'red',
-  'Music': 'pink',
-  'Video': 'red',
-  'Gaming': 'purple',
-  'Design': 'orange',
-  'Research': 'cyan',
-  'Education': 'yellow',
-  'Reference': 'yellow',
-  'Travel': 'cyan',
-  'Health': 'green',
-  'Security': 'red',
-  'Other': 'grey',
+  Social: 'pink',
+  Work: 'green',
+  Communication: 'green',
+  Shopping: 'orange',
+  Finance: 'green',
+  News: 'red',
+  Entertainment: 'red',
+  Music: 'pink',
+  Video: 'red',
+  Gaming: 'purple',
+  Design: 'orange',
+  Research: 'cyan',
+  Education: 'yellow',
+  Reference: 'yellow',
+  Travel: 'cyan',
+  Health: 'green',
+  Security: 'red',
+  Other: 'grey',
 };
 
 /** Deterministic color for any category name — stable across sessions. */
@@ -184,6 +196,31 @@ export function colorForCategory(category: string): chrome.tabGroups.ColorEnum {
     hash = (hash * 31 + category.charCodeAt(i)) >>> 0;
   }
   // Avoid grey (reserved for "Other") for hashed colors
-  const palette = GROUP_COLORS.filter(c => c !== 'grey');
+  const palette = GROUP_COLORS.filter((c) => c !== 'grey');
   return palette[hash % palette.length];
 }
+
+/** Side panel → background message protocol. One discriminated union shared
+ *  by both ends: the background's handleMessage() switches exhaustively over
+ *  `action`, and the side panel's sendMessage() helper only accepts these
+ *  shapes — a typo'd action or missing payload fails to compile instead of
+ *  hitting the runtime "Unknown action" error. */
+export type Message =
+  | { action: 'smartGroup' }
+  | { action: 'previewCustomCategories'; instruction: string }
+  | { action: 'smartGroupCustom'; instruction: string; categories?: string[] }
+  | { action: 'undoGrouping' }
+  | { action: 'hasUndo' }
+  | { action: 'closeDuplicates' }
+  | { action: 'hibernateAll' }
+  | { action: 'hibernateTab'; tabId: number }
+  | { action: 'getStats' }
+  | { action: 'findDuplicates' }
+  | { action: 'domainStats' }
+  | { action: 'previewClassification' }
+  | { action: 'isAiReady' }
+  | { action: 'learnedCount' }
+  | { action: 'clearLearned' }
+  | { action: 'snoozeTab'; record: SnoozeRecord }
+  | { action: 'getSnoozed' }
+  | { action: 'restoreSnoozed'; id: string };

@@ -28,13 +28,13 @@ export function WorkspacesView() {
       name: workspaceName.trim(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      tabs: tabs.map(t => ({
+      tabs: tabs.map((t) => ({
         url: t.url || '',
         title: t.title || '',
         pinned: t.pinned || false,
-        groupIndex: groups.findIndex(g => g.id === t.groupId),
+        groupIndex: groups.findIndex((g) => g.id === t.groupId),
       })),
-      groups: groups.map(g => ({
+      groups: groups.map((g) => ({
         name: g.title || '',
         color: g.color,
         collapsed: g.collapsed,
@@ -51,7 +51,7 @@ export function WorkspacesView() {
   async function handleRestore(workspace: Workspace) {
     // Open all tabs from workspace in a new window
     const win = await chrome.windows.create({
-      url: workspace.tabs.filter(t => t.url).map(t => t.url),
+      url: workspace.tabs.filter((t) => t.url).map((t) => t.url),
       focused: true,
     });
 
@@ -65,7 +65,7 @@ export function WorkspacesView() {
         const group = workspace.groups[i];
         const groupTabs = newTabs.filter((_, idx) => workspace.tabs[idx]?.groupIndex === i);
         if (groupTabs.length > 0) {
-          const tabIds = groupTabs.map(t => t.id!).filter(Boolean);
+          const tabIds = groupTabs.map((t) => t.id!).filter(Boolean);
           if (tabIds.length > 0) {
             try {
               const groupId = await chrome.tabs.group({ tabIds });
@@ -85,7 +85,7 @@ export function WorkspacesView() {
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this workspace?')) return;
-    const updated = workspaces.filter(w => w.id !== id);
+    const updated = workspaces.filter((w) => w.id !== id);
     await chrome.storage.local.set({ workspaces: updated });
     setWorkspaces(updated);
   }
@@ -102,7 +102,10 @@ export function WorkspacesView() {
 
   function formatDate(ts: number) {
     return new Date(ts).toLocaleDateString(undefined, {
-      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 
@@ -119,8 +122,12 @@ export function WorkspacesView() {
             autoFocus
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
           />
-          <button className="btn btn-primary" onClick={handleSave}>Save</button>
-          <button className="btn btn-secondary" onClick={() => setShowSave(false)}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSave}>
+            Save
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowSave(false)}>
+            Cancel
+          </button>
         </div>
       ) : (
         <button className="btn btn-primary full-width" onClick={() => setShowSave(true)}>
@@ -136,30 +143,42 @@ export function WorkspacesView() {
         </div>
       ) : (
         <div className="workspace-list">
-          {workspaces.sort((a, b) => b.updatedAt - a.updatedAt).map(ws => (
-            <div key={ws.id} className="workspace-card">
-              <div className="workspace-header">
-                <div>
-                  <h4>{ws.name}</h4>
-                  <span className="workspace-meta">
-                    {ws.tabs.length} tabs · {ws.groups.length} groups · {formatDate(ws.updatedAt)}
-                  </span>
+          {workspaces
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+            .map((ws) => (
+              <div key={ws.id} className="workspace-card">
+                <div className="workspace-header">
+                  <div>
+                    <h4>{ws.name}</h4>
+                    <span className="workspace-meta">
+                      {ws.tabs.length} tabs · {ws.groups.length} groups · {formatDate(ws.updatedAt)}
+                    </span>
+                  </div>
+                </div>
+                <div className="workspace-preview">
+                  {ws.groups.map((g, i) => (
+                    <span
+                      key={i}
+                      className="workspace-group-pill"
+                      style={{ borderColor: `var(--group-${g.color}, var(--accent))` }}
+                    >
+                      {g.name || 'Unnamed'}
+                    </span>
+                  ))}
+                </div>
+                <div className="workspace-actions">
+                  <button className="btn btn-primary" onClick={() => handleRestore(ws)}>
+                    🔄 Restore
+                  </button>
+                  <button className="btn btn-secondary" onClick={() => handleExport(ws)}>
+                    📥 Export
+                  </button>
+                  <button className="btn btn-danger" onClick={() => handleDelete(ws.id)}>
+                    🗑️
+                  </button>
                 </div>
               </div>
-              <div className="workspace-preview">
-                {ws.groups.map((g, i) => (
-                  <span key={i} className="workspace-group-pill" style={{ borderColor: `var(--group-${g.color}, var(--accent))` }}>
-                    {g.name || 'Unnamed'}
-                  </span>
-                ))}
-              </div>
-              <div className="workspace-actions">
-                <button className="btn btn-primary" onClick={() => handleRestore(ws)}>🔄 Restore</button>
-                <button className="btn btn-secondary" onClick={() => handleExport(ws)}>📥 Export</button>
-                <button className="btn btn-danger" onClick={() => handleDelete(ws.id)}>🗑️</button>
-              </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
     </div>

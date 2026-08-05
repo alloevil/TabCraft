@@ -82,7 +82,11 @@ const MESSAGES = {
 export type MessageKey = keyof (typeof MESSAGES)['en'];
 
 /** Translate a key for a locale, with optional {placeholder} substitution. */
-export function translate(locale: Locale, key: MessageKey, vars?: Record<string, string | number>): string {
+export function translate(
+  locale: Locale,
+  key: MessageKey,
+  vars?: Record<string, string | number>
+): string {
   const table = MESSAGES[locale] ?? MESSAGES.en;
   let str: string = table[key] ?? MESSAGES.en[key] ?? key;
   if (vars) {
@@ -95,7 +99,13 @@ export function translate(locale: Locale, key: MessageKey, vars?: Record<string,
 
 const LocaleContext = createContext<Locale>('en');
 
-export function LocaleProvider({ locale, children }: { locale: Locale; children: React.ReactNode }) {
+export function LocaleProvider({
+  locale,
+  children,
+}: {
+  locale: Locale;
+  children: React.ReactNode;
+}) {
   return <LocaleContext.Provider value={locale}>{children}</LocaleContext.Provider>;
 }
 

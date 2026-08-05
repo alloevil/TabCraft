@@ -45,16 +45,14 @@ removing it would only remove those three menu items.
 MV3 service workers can be terminated by Chrome at any time, so
 `setTimeout`-based scheduling is unreliable for periodic work.
 `chrome.alarms` is used instead to reliably run the periodic session
-auto-save and the hibernation check every 5 minutes, even after the service
-worker has been restarted.
+auto-save and the hibernation check every 5 minutes, and to reopen snoozed
+tabs at their scheduled wake time, even after the service worker has been
+restarted.
 
-## `host_permissions: <all_urls>`
+## Host permissions
 
-This is the broadest permission TabCraft requests, and it exists for one
-reason: to read the `url` and `title` of tabs on **any** site so they can be
-classified and grouped — TabCraft has no way to know in advance which sites
-a given user will have open. TabCraft does **not** inject scripts into
-pages, does **not** read page content/DOM, and does **not** transmit any
-URL or title off-device — see [PRIVACY.md](./PRIVACY.md) for details. The
-permission is used exclusively via the `chrome.tabs` API (tab metadata),
-never via content scripts or `fetch` to page origins.
+TabCraft requests **no host permissions**. It never injects scripts into
+pages, never reads page content/DOM, and never fetches from page origins.
+Everything it needs — each tab's URL, title, and favicon — is tab _metadata_
+already covered by the `tabs` permission. See [PRIVACY.md](./PRIVACY.md) for
+the full data-handling policy.

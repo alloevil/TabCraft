@@ -6,9 +6,25 @@ import { colorForCategory } from '../shared/types';
 import { RuleEngine, extractDomain, getFriendlyName } from './ai/rule-engine';
 import { GeminiNanoClassifier } from './ai/gemini-nano';
 import { Storage } from './storage';
-import { normalizeUrl } from './duplicate';
-import { AI_TRUST_THRESHOLD } from '../shared/constants';
+import { findDuplicateGroups, getBestTab } from './duplicate';
+import { AI_TRUST_THRESHOLD, SELF_GROUP_SUPPRESS_MS } from '../shared/constants';
 
+/** The classifier surface TabManager depends on — implemented by
+ *  GeminiNanoClassifier in production, replaceable in tests to drive the
+ *  classification pipeline with scripted verdicts. */
+export interface AiClassifier {
+  init(): Promise<boolean>;
+  classify(
+    url: string,
+    title: string,
+    categories?: readonly string[]
+  ): Promise<ClassificationResult>;
+  classifyBatch(
+    tabs: Array<{ url: string; title: string }>,
+    categories?: readonly string[]
+  ): Promise<ClassificationResult[]>;
+  extractCategories(instruction: string): Promise<string[] | null>;
+}
 /** Get all tabs in the current window */
 async function getAllTabs(): Promise<chrome.tabs.Tab[]> {
   return chrome.tabs.query({ currentWindow: true });
@@ -19,12 +35,46 @@ async function getAllTabs(): Promise<chrome.tabs.Tab[]> {
  */
 export class TabManager {
   private ruleEngine: RuleEngine;
-  private aiClassifier: GeminiNanoClassifier;
+  private aiClassifier: AiClassifier;
   private aiReady = false;
 
-  constructor() {
+  /** tabId → timestamp of the last time WE grouped that tab (smartGroupAll,
+   *  autoGroupTab, undo). The background's learn-from-manual-grouping
+   *  listener consults this to skip groupId changes the extension itself
+   *  caused — otherwise every automatic grouping would be "learned" as if
+   *  the user had dragged the tab there, feeding classifier output back in
+   *  as user intent. In-memory only: losing it on SW restart just means a
+   *  (already debounce-window-sized) suppression window is lost. */
+  private selfGroupedAt = new Map<number, number>();
+
+  /** Record that the extension just grouped these tabs. */
+  private markSelfGrouped(tabIds: number[]): void {
+    const now = Date.now();
+    for (const id of tabIds) this.selfGroupedAt.set(id, now);
+    // Opportunistic prune so the map can't grow unbounded in a long-lived SW.
+    if (this.selfGroupedAt.size > 1000) {
+      for (const [id, at] of this.selfGroupedAt) {
+        if (now - at > SELF_GROUP_SUPPRESS_MS) this.selfGroupedAt.delete(id);
+      }
+    }
+  }
+
+  /** Was this tab grouped by the extension within the suppression window? */
+  wasSelfGrouped(tabId: number): boolean {
+    const at = this.selfGroupedAt.get(tabId);
+    if (at === undefined) return false;
+    if (Date.now() - at > SELF_GROUP_SUPPRESS_MS) {
+      this.selfGroupedAt.delete(tabId);
+      return false;
+    }
+    return true;
+  }
+
+  /** `aiClassifier` is injectable so tests can drive the two-phase classify
+   *  pipeline with a scripted classifier; production uses Gemini Nano. */
+  constructor(aiClassifier: AiClassifier = new GeminiNanoClassifier()) {
     this.ruleEngine = new RuleEngine();
-    this.aiClassifier = new GeminiNanoClassifier();
+    this.aiClassifier = aiClassifier;
   }
 
   /** Initialize the tab manager */
@@ -114,7 +164,7 @@ export class TabManager {
   async bucketForTab(tab: chrome.tabs.Tab, mode: 'smart' | 'domain'): Promise<string> {
     if (mode === 'domain') {
       const domain = extractDomain(tab.url || '');
-      return domain ? (getFriendlyName(domain) || domain) : 'Other';
+      return domain ? getFriendlyName(domain) || domain : 'Other';
     }
     const result = await this.classifyTab(tab);
     return result.category;
@@ -145,7 +195,7 @@ export class TabManager {
       for (const tab of tabs) {
         if (tab.id == null) continue;
         const domain = extractDomain(tab.url || '');
-        buckets.set(tab.id, domain ? (getFriendlyName(domain) || domain) : 'Other');
+        buckets.set(tab.id, domain ? getFriendlyName(domain) || domain : 'Other');
       }
       return buckets;
     }
@@ -162,7 +212,7 @@ export class TabManager {
 
     // Phase 2 — one batch AI call for the uncertain remainder.
     if (this.aiReady && needsAi.length > 0) {
-      const batch = needsAi.map(t => ({ url: t.url || '', title: t.title || '' }));
+      const batch = needsAi.map((t) => ({ url: t.url || '', title: t.title || '' }));
       const aiResults = await this.aiClassifier.classifyBatch(batch);
       // Collect confident AI verdicts to feed back as learned mappings, so the
       // same domain skips the AI next time (faster) and classifies consistently.
@@ -202,16 +252,12 @@ export class TabManager {
    *  but does not create/modify any tab groups or write any stats. Exists
    *  purely to inspect classification quality against real tabs without
    *  disturbing the user's existing tab layout. */
-  async previewClassification(): Promise<
-    Array<{ title: string; url: string; category: string }>
-  > {
+  async previewClassification(): Promise<Array<{ title: string; url: string; category: string }>> {
     const tabs = await getAllTabs();
     const settings = await Storage.getSettings();
-    const groupable = tabs.filter(
-      t => t.url && !t.url.startsWith('chrome://') && !t.pinned
-    );
+    const groupable = tabs.filter((t) => t.url && !t.url.startsWith('chrome://') && !t.pinned);
     const buckets = await this.classifyAllTabs(groupable, settings.groupingMode, { learn: false });
-    return groupable.map(t => ({
+    return groupable.map((t) => ({
       title: t.title || '',
       url: t.url || '',
       category: buckets.get(t.id!) || 'Other',
@@ -227,9 +273,7 @@ export class TabManager {
     await this.saveUndoSnapshot(tabs);
 
     // Classify all groupable tabs up front (one batch AI call, not N).
-    const groupable = tabs.filter(
-      t => t.url && !t.url.startsWith('chrome://') && !t.pinned
-    );
+    const groupable = tabs.filter((t) => t.url && !t.url.startsWith('chrome://') && !t.pinned);
     const tabBuckets = await this.classifyAllTabs(groupable, settings.groupingMode);
 
     return this.materializeGroups(tabBuckets, groupable, 'Other', settings.minTabsPerGroup);
@@ -268,16 +312,14 @@ export class TabManager {
     instruction: string,
     categories?: string[]
   ): Promise<{ grouped: number; groups: number; categories: string[] }> {
-    const resolvedCategories = categories ?? await this.extractCategoriesOrThrow(instruction);
+    const resolvedCategories = categories ?? (await this.extractCategoriesOrThrow(instruction));
 
     const tabs = await getAllTabs();
     const settings = await Storage.getSettings();
     await this.saveUndoSnapshot(tabs);
 
-    const groupable = tabs.filter(
-      t => t.url && !t.url.startsWith('chrome://') && !t.pinned
-    );
-    const batch = groupable.map(t => ({ url: t.url || '', title: t.title || '' }));
+    const groupable = tabs.filter((t) => t.url && !t.url.startsWith('chrome://') && !t.pinned);
+    const batch = groupable.map((t) => ({ url: t.url || '', title: t.title || '' }));
     const results = await this.aiClassifier.classifyBatch(batch, resolvedCategories);
 
     const catchAll = resolvedCategories[resolvedCategories.length - 1];
@@ -286,7 +328,12 @@ export class TabManager {
       buckets.set(tab.id!, results[i]?.category || catchAll);
     });
 
-    const { grouped, groups } = await this.materializeGroups(buckets, groupable, catchAll, settings.minTabsPerGroup);
+    const { grouped, groups } = await this.materializeGroups(
+      buckets,
+      groupable,
+      catchAll,
+      settings.minTabsPerGroup
+    );
     return { grouped, groups, categories: resolvedCategories };
   }
 
@@ -318,13 +365,18 @@ export class TabManager {
       });
 
     // Reuse existing same-named groups instead of always creating new ones
-    const existingGroups = await chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+    const existingGroups = await chrome.tabGroups.query({
+      windowId: chrome.windows.WINDOW_ID_CURRENT,
+    });
 
     let groupCount = 0;
     let groupedTabCount = 0;
     for (const [name, tabIds] of validGroups) {
       try {
-        const existing = existingGroups.find(g => g.title === name);
+        const existing = existingGroups.find((g) => g.title === name);
+        // Mark before grouping so the groupId-change event can never observe
+        // the tab unmarked, however quickly it fires.
+        this.markSelfGrouped(tabIds);
         const groupId = existing
           ? await chrome.tabs.group({ tabIds, groupId: existing.id })
           : await chrome.tabs.group({ tabIds });
@@ -360,10 +412,11 @@ export class TabManager {
 
     // Find existing group with matching name
     const groups = await chrome.tabGroups.query({ windowId: tab.windowId });
-    const existingGroup = groups.find(g => g.title === bucket);
+    const existingGroup = groups.find((g) => g.title === bucket);
 
     if (existingGroup) {
       // Add to existing group
+      this.markSelfGrouped([tab.id!]);
       await chrome.tabs.group({ tabIds: tab.id!, groupId: existingGroup.id });
     } else {
       // No existing group — form one if enough ungrouped tabs share this bucket.
@@ -371,7 +424,7 @@ export class TabManager {
       // per tab.
       const allTabs = await getAllTabs();
       const candidates = allTabs.filter(
-        t => t.url && !t.url.startsWith('chrome://') && !t.pinned && t.groupId === -1
+        (t) => t.url && !t.url.startsWith('chrome://') && !t.pinned && t.groupId === -1
       );
       const candidateBuckets = await this.classifyAllTabs(candidates, settings.groupingMode);
       const sameBucket: number[] = [];
@@ -379,6 +432,7 @@ export class TabManager {
         if (candidateBuckets.get(t.id!) === bucket) sameBucket.push(t.id!);
       }
       if (sameBucket.length >= settings.minTabsPerGroup) {
+        this.markSelfGrouped(sameBucket);
         const groupId = await chrome.tabs.group({ tabIds: sameBucket });
         await chrome.tabGroups.update(groupId, {
           title: bucket,
@@ -397,8 +451,8 @@ export class TabManager {
       const groupMeta: Record<number, { title: string; color: string }> = {};
       for (const g of groups) groupMeta[g.id] = { title: g.title || '', color: g.color };
       const snapshot = tabs
-        .filter(t => t.id != null)
-        .map(t => ({ tabId: t.id!, groupId: t.groupId ?? -1 }));
+        .filter((t) => t.id != null)
+        .map((t) => ({ tabId: t.id!, groupId: t.groupId ?? -1 }));
       await Storage.pushUndoSnapshot({ tabs: snapshot, groupMeta, createdAt: Date.now() });
     } catch (err) {
       console.debug('[TabCraft] Failed to save undo snapshot:', err);
@@ -411,7 +465,7 @@ export class TabManager {
     if (!snapshot) return false;
 
     // First, ungroup every tab in the snapshot to a clean slate.
-    const tabIds = snapshot.tabs.map(t => t.tabId);
+    const tabIds = snapshot.tabs.map((t) => t.tabId);
     try {
       await chrome.tabs.ungroup(tabIds);
     } catch (err) {
@@ -429,6 +483,7 @@ export class TabManager {
 
     for (const [oldGroupId, ids] of byGroup) {
       try {
+        this.markSelfGrouped(ids);
         const newGroupId = await chrome.tabs.group({ tabIds: ids });
         const meta = snapshot.groupMeta[oldGroupId];
         if (meta) {
@@ -444,35 +499,21 @@ export class TabManager {
     return true;
   }
 
-  /** Detect and return duplicate tabs */
-  async findDuplicates(): Promise<Array<{ url: string; tabs: chrome.tabs.Tab[] }>> {
-    const tabs = await getAllTabs();
-    const urlMap = new Map<string, chrome.tabs.Tab[]>();
-
-    for (const tab of tabs) {
-      if (!tab.url || tab.url.startsWith('chrome://')) continue;
-      const normalized = normalizeUrl(tab.url);
-      const existing = urlMap.get(normalized) || [];
-      existing.push(tab);
-      urlMap.set(normalized, existing);
-    }
-
-    return Array.from(urlMap.entries())
-      .filter(([, tabs]) => tabs.length > 1)
-      .map(([url, tabs]) => ({ url, tabs }));
+  /** Detect and return duplicate tabs in the current window. */
+  async findDuplicates(): Promise<Array<{ normalizedUrl: string; tabs: chrome.tabs.Tab[] }>> {
+    return findDuplicateGroups(await getAllTabs());
   }
 
-  /** Close all duplicate tabs (keep one) */
+  /** Close all duplicate tabs (keep the active-or-most-recent one per group) */
   async closeDuplicates(): Promise<number> {
     const duplicates = await this.findDuplicates();
     let closed = 0;
 
     for (const { tabs } of duplicates) {
-      // Keep the most recently active tab, close the rest
-      const sorted = tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
-      const toClose = sorted.slice(1);
-      for (const tab of toClose) {
-        await chrome.tabs.remove(tab.id!);
+      const keep = getBestTab(tabs);
+      for (const tab of tabs) {
+        if (tab === keep || tab.id === undefined) continue;
+        await chrome.tabs.remove(tab.id);
         closed++;
       }
     }
@@ -507,10 +548,5 @@ export class TabManager {
   /** Is the AI engine ready? */
   isAiReady(): boolean {
     return this.aiReady;
-  }
-
-  /** Cleanup */
-  destroy(): void {
-    this.aiClassifier.destroy();
   }
 }

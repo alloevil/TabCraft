@@ -4,6 +4,7 @@
 
 import { Storage } from './storage';
 import { LAST_ACCESS_FLUSH_DEBOUNCE_MS } from '../shared/constants';
+import type { TimerHandle } from '../shared/types';
 import { formatMemoryEstimate } from '../shared/format';
 
 const LAST_ACCESS_KEY = 'hibernation_lastAccess';
@@ -29,7 +30,7 @@ export class HibernationManager {
    *  every activation/navigation; writes are flushed to storage on a
    *  trailing debounce (see scheduleFlush). */
   private lastAccessCache: Record<number, number> | null = null;
-  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private flushTimer: TimerHandle | null = null;
 
   /** Start monitoring tab activity */
   start(): void {
@@ -150,7 +151,7 @@ export class HibernationManager {
   /** Get hibernation stats */
   async getStats(): Promise<{ hibernated: number; total: number; memorySaved: string }> {
     const tabs = await chrome.tabs.query({ currentWindow: true });
-    const hibernated = tabs.filter(t => t.discarded).length;
+    const hibernated = tabs.filter((t) => t.discarded).length;
     const total = tabs.length;
 
     // Note: actual memory savings vary by tab content — this is a rough
