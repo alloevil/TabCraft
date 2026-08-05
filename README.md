@@ -33,18 +33,18 @@ Most tab managers just group by domain. TabCraft understands what each tab is **
        alt="Features section header">
 </p>
 
-| Feature | What it does |
-|---------|-------------|
-| **🤖 AI Smart Grouping** | Groups tabs by topic using on-device AI (Gemini Nano) with rule-based fallback |
-| **📦 Batch Classification** | Classifies many tabs in a single AI call, with per-tab fallback |
-| **↩️ Undo Grouping** | One-click restore of the layout before the last Smart Group |
-| **🧠 Self-Learning** | Learns domain→group mappings from your manual grouping (opt-in) |
-| **📋 Domain Rules** | 390+ built-in rules, fully editable, import/export |
-| **🔍 Duplicate Detection** | Smart URL matching that ignores tracking parameters |
-| **💤 Tab Hibernation** | Auto-suspend inactive tabs to save up to 95% memory |
-| **🗂️ Workspaces** | Save and restore named snapshots of your tabs |
-| **🎨 Side Panel UI** | Modern glassmorphism interface with dark/light mode |
-| **🔒 100% Private** | All processing runs locally. Zero data leaves your browser |
+| Feature                     | What it does                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| **🤖 AI Smart Grouping**    | Groups tabs by topic using on-device AI (Gemini Nano) with rule-based fallback |
+| **📦 Batch Classification** | Classifies many tabs in a single AI call, with per-tab fallback                |
+| **↩️ Undo Grouping**        | One-click restore of the layout before the last Smart Group                    |
+| **🧠 Self-Learning**        | Learns domain→group mappings from your manual grouping (opt-in)                |
+| **📋 Domain Rules**         | 390+ built-in rules, fully editable, import/export                             |
+| **🔍 Duplicate Detection**  | Smart URL matching that ignores tracking parameters                            |
+| **💤 Tab Hibernation**      | Auto-suspend inactive tabs to save up to 95% memory                            |
+| **🗂️ Workspaces**           | Save and restore named snapshots of your tabs                                  |
+| **🎨 Side Panel UI**        | Modern glassmorphism interface with dark/light mode                            |
+| **🔒 100% Private**         | All processing runs locally. Zero data leaves your browser                     |
 
 > 📖 **New here? Read the [full usage guide → USAGE.md](USAGE.md)** — install, every button, settings, keyboard shortcuts, and how to enable on-device AI.
 
@@ -139,13 +139,13 @@ npm run build  # Production build
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
+| Layer         | Technology                                                  |
+| ------------- | ----------------------------------------------------------- |
 | **Framework** | [Plasmo](https://plasmo.com/) — Browser extension framework |
-| **Language** | TypeScript |
-| **UI** | React + Tailwind CSS |
-| **AI** | Chrome Built-in AI (Gemini Nano) + local rule engine |
-| **Storage** | chrome.storage.local + IndexedDB |
+| **Language**  | TypeScript                                                  |
+| **UI**        | React + Tailwind CSS                                        |
+| **AI**        | Chrome Built-in AI (Gemini Nano) + local rule engine        |
+| **Storage**   | chrome.storage.local + IndexedDB                            |
 
 ---
 
