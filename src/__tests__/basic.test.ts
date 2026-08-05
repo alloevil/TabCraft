@@ -1,7 +1,7 @@
 // TabCraft — Basic Tests
 import { describe, it, expect } from 'vitest';
-import { normalizeUrl } from '../background/duplicate';
-import { extractDomain } from '../background/ai/rule-engine';
+import { normalizeUrl } from '../shared/duplicate';
+import { extractDomain } from '../shared/domain';
 
 // Test normalizeUrl from duplicate.ts — imported directly (not reimplemented)
 // so this test actually catches regressions in the shared implementation

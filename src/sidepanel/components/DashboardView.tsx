@@ -1,7 +1,7 @@
 // TabCraft — Dashboard View (Activity & Stats)
 
 import React, { useState, useEffect } from 'react';
-import { extractDomain } from '../../background/ai/rule-engine';
+import { extractDomain } from '../../shared/domain';
 
 interface DashboardStats {
   totalTabs: number;

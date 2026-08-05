@@ -1,7 +1,7 @@
 // TabCraft — Duplicate Tab Detection
 // Smart URL matching that ignores tracking parameters
 
-import { TRACKING_PARAMS } from '../shared/constants';
+import { TRACKING_PARAMS } from './constants';
 
 /** Normalize a URL for duplicate comparison. This is the single source of
  *  truth for "are these two tabs the same page" — background auto-close,

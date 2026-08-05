@@ -3,10 +3,11 @@
 
 import type { ClassificationResult } from '../shared/types';
 import { colorForCategory } from '../shared/types';
-import { RuleEngine, extractDomain, getFriendlyName } from './ai/rule-engine';
+import { RuleEngine, getFriendlyName } from './ai/rule-engine';
+import { extractDomain } from '../shared/domain';
 import { GeminiNanoClassifier } from './ai/gemini-nano';
 import { Storage } from './storage';
-import { findDuplicateGroups, getBestTab } from './duplicate';
+import { findDuplicateGroups, getBestTab } from '../shared/duplicate';
 import { AI_TRUST_THRESHOLD, SELF_GROUP_SUPPRESS_MS } from '../shared/constants';
 
 /** The classifier surface TabManager depends on — implemented by

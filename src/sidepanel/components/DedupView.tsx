@@ -1,7 +1,7 @@
 // TabCraft — Cross-Window Duplicate Detection & Merge
 
 import React, { useState, useEffect } from 'react';
-import { findDuplicateGroups, getBestTab } from '../../background/duplicate';
+import { findDuplicateGroups, getBestTab } from '../../shared/duplicate';
 import { focusTab } from '../utils';
 
 interface DuplicateGroup {

@@ -12,7 +12,7 @@
 import { TabManager } from './tab-manager';
 import { HibernationManager } from './hibernation';
 import { Storage } from './storage';
-import { getBestTab } from './duplicate';
+import { getBestTab } from '../shared/duplicate';
 import type { Message, TimerHandle } from '../shared/types';
 import {
   DUPLICATE_SCAN_DEBOUNCE_MS,

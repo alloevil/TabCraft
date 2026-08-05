@@ -2,7 +2,7 @@
 // keep-selection helpers used by the background auto-close scan,
 // TabManager.findDuplicates/closeDuplicates, and the Dedup view.
 import { describe, it, expect } from 'vitest';
-import { findDuplicateGroups, getBestTab } from '../background/duplicate';
+import { findDuplicateGroups, getBestTab } from '../shared/duplicate';
 
 interface FakeTab {
   id: number;

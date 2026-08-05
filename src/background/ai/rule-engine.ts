@@ -4,18 +4,8 @@
 import type { ClassificationResult, DomainRule } from '../../shared/types';
 import seedRulesData from '../../rules/seed-rules.json';
 import { RULE_CONFIDENCE } from '../../shared/constants';
+import { extractDomain } from '../../shared/domain';
 import { getDomain } from 'tldts';
-
-/** Extract domain from URL */
-export function extractDomain(url: string): string {
-  try {
-    const u = new URL(url);
-    // Remove www. prefix
-    return u.hostname.replace(/^www\./, '');
-  } catch {
-    return '';
-  }
-}
 
 /** Precompiled whole-word matchers, keyed by keyword. Built once at module
  *  load instead of `new RegExp(...)` on every call — scoreText() runs this
