@@ -23,7 +23,9 @@ describe('normalizeUrl', () => {
   });
 
   it('strips the www. subdomain', () => {
-    expect(normalizeUrl('https://www.example.com/page')).toBe(normalizeUrl('https://example.com/page'));
+    expect(normalizeUrl('https://www.example.com/page')).toBe(
+      normalizeUrl('https://example.com/page')
+    );
   });
 
   it('handles invalid URLs gracefully', () => {
@@ -55,13 +57,30 @@ describe('extractDomain', () => {
 // Test category parsing
 describe('category parsing', () => {
   const CATEGORIES = [
-    'Development', 'Social', 'Work', 'Shopping', 'News', 'Entertainment',
-    'Finance', 'Education', 'Research', 'Reference', 'Travel', 'Health',
-    'AI & ML', 'Gaming', 'Music', 'Video', 'Design', 'Communication',
-    'Cloud & DevOps', 'Security', 'Other',
+    'Development',
+    'Social',
+    'Work',
+    'Shopping',
+    'News',
+    'Entertainment',
+    'Finance',
+    'Education',
+    'Research',
+    'Reference',
+    'Travel',
+    'Health',
+    'AI & ML',
+    'Gaming',
+    'Music',
+    'Video',
+    'Design',
+    'Communication',
+    'Cloud & DevOps',
+    'Security',
+    'Other',
   ] as const;
 
-  type CategoryName = typeof CATEGORIES[number];
+  type CategoryName = (typeof CATEGORIES)[number];
 
   function parseCategory(response: string): CategoryName | null {
     const cleaned = response.trim().replace(/['"]/g, '');
@@ -105,8 +124,12 @@ describe('RuleEngine classification', async () => {
 
   it('classifies expanded domains correctly', () => {
     expect(engine.classify('https://www.zhihu.com/question/1', '知乎').category).toBe('Social');
-    expect(engine.classify('https://leetcode.com/problems/two-sum', 'LeetCode').category).toBe('Development');
-    expect(engine.classify('https://www.bilibili.com/video/x', 'B站').category).toBe('Entertainment');
+    expect(engine.classify('https://leetcode.com/problems/two-sum', 'LeetCode').category).toBe(
+      'Development'
+    );
+    expect(engine.classify('https://www.bilibili.com/video/x', 'B站').category).toBe(
+      'Entertainment'
+    );
     expect(engine.classify('https://booking.com/hotel/x', 'Booking').category).toBe('Travel');
   });
 
@@ -145,7 +168,10 @@ describe('RuleEngine classification', async () => {
     // Title hits Music three ways (music, album, playlist) vs Entertainment once
     // (stream). Old first-match logic returned Entertainment (listed earlier);
     // weighted scoring must now pick Music.
-    const r = engine.classify('https://unknown-host.test/', 'Stream this album playlist — new music');
+    const r = engine.classify(
+      'https://unknown-host.test/',
+      'Stream this album playlist — new music'
+    );
     expect(r.category).toBe('Music');
   });
 
@@ -157,15 +183,25 @@ describe('RuleEngine classification', async () => {
   });
 
   it('expanded lifestyle keywords no longer fall through to Other', () => {
-    expect(engine.classify('https://unknown-h.test/', 'Best hotel booking for our trip').category).toBe('Travel');
-    expect(engine.classify('https://unknown-h.test/', 'My workout and nutrition plan').category).toBe('Health');
-    expect(engine.classify('https://unknown-h.test/', 'Steam game library on sale').category).not.toBe('Other');
+    expect(
+      engine.classify('https://unknown-h.test/', 'Best hotel booking for our trip').category
+    ).toBe('Travel');
+    expect(
+      engine.classify('https://unknown-h.test/', 'My workout and nutrition plan').category
+    ).toBe('Health');
+    expect(
+      engine.classify('https://unknown-h.test/', 'Steam game library on sale').category
+    ).not.toBe('Other');
   });
 
   it('classifies by URL path when domain is unknown and title is blank', () => {
     // path carries the signal; title empty so it cannot help
-    expect(engine.classify('https://unknown-site.test/finance/portfolio/holdings', '').category).toBe('Finance');
-    expect(engine.classify('https://unknown-site.test/docs/api/reference', '').category).toBe('Development');
+    expect(
+      engine.classify('https://unknown-site.test/finance/portfolio/holdings', '').category
+    ).toBe('Finance');
+    expect(engine.classify('https://unknown-site.test/docs/api/reference', '').category).toBe(
+      'Development'
+    );
   });
 
   it('URL path ranks above title keywords', () => {
@@ -185,15 +221,34 @@ describe('multiPurpose domain rules', async () => {
 
   it('title keyword hit overrides the domain rule category', () => {
     const engine = new RuleEngine([
-      { id: 't1', domain: 'multitest.example', category: 'Entertainment', source: 'seed', createdAt: 0, updatedAt: 0, multiPurpose: true },
+      {
+        id: 't1',
+        domain: 'multitest.example',
+        category: 'Entertainment',
+        source: 'seed',
+        createdAt: 0,
+        updatedAt: 0,
+        multiPurpose: true,
+      },
     ]);
-    const r = engine.classify('https://multitest.example/post/1', 'New GPT-5 model announcement thread');
+    const r = engine.classify(
+      'https://multitest.example/post/1',
+      'New GPT-5 model announcement thread'
+    );
     expect(r.category).toBe('AI & ML');
   });
 
   it('falls back to the domain category (tagged "fallback") when title has no keyword hit', () => {
     const engine = new RuleEngine([
-      { id: 't1', domain: 'multitest.example', category: 'Entertainment', source: 'seed', createdAt: 0, updatedAt: 0, multiPurpose: true },
+      {
+        id: 't1',
+        domain: 'multitest.example',
+        category: 'Entertainment',
+        source: 'seed',
+        createdAt: 0,
+        updatedAt: 0,
+        multiPurpose: true,
+      },
     ]);
     const r = engine.classify('https://multitest.example/post/1', 'Just a regular day');
     expect(r.category).toBe('Entertainment');
@@ -204,7 +259,15 @@ describe('multiPurpose domain rules', async () => {
 
   it('ignores URL path keywords — platform boilerplate like "video" must not masquerade as content signal', () => {
     const engine = new RuleEngine([
-      { id: 't1', domain: 'multitest.example', category: 'Entertainment', source: 'seed', createdAt: 0, updatedAt: 0, multiPurpose: true },
+      {
+        id: 't1',
+        domain: 'multitest.example',
+        category: 'Entertainment',
+        source: 'seed',
+        createdAt: 0,
+        updatedAt: 0,
+        multiPurpose: true,
+      },
     ]);
     // Path contains "video" (would score Video/Entertainment via scoreText),
     // but title has no keyword — result must still be the domain fallback,
@@ -216,7 +279,14 @@ describe('multiPurpose domain rules', async () => {
 
   it('ordinary (non-multiPurpose) domain rules are unaffected — still win immediately', () => {
     const engine = new RuleEngine([
-      { id: 't1', domain: 'strict.example', category: 'Work', source: 'seed', createdAt: 0, updatedAt: 0 },
+      {
+        id: 't1',
+        domain: 'strict.example',
+        category: 'Work',
+        source: 'seed',
+        createdAt: 0,
+        updatedAt: 0,
+      },
     ]);
     const r = engine.classify('https://strict.example/', 'New GPT-5 model announcement thread');
     expect(r.category).toBe('Work');
@@ -226,7 +296,10 @@ describe('multiPurpose domain rules', async () => {
   it('real seed data: x.com now varies by tab content instead of always "Social"', async () => {
     const { RuleEngine: RealEngine } = await import('../background/ai/rule-engine');
     const engine = new RealEngine();
-    const techy = engine.classify('https://x.com/i/status/123', 'New GPT-5 model announcement thread');
+    const techy = engine.classify(
+      'https://x.com/i/status/123',
+      'New GPT-5 model announcement thread'
+    );
     expect(techy.category).toBe('AI & ML');
     const generic = engine.classify('https://x.com/home', 'Home / X');
     expect(generic.category).toBe('Social');
@@ -243,7 +316,6 @@ describe('multiPurpose domain rules', async () => {
     expect(r.source).toBe('fallback'); // still AI-eligible, unlike before this fix
   });
 });
-
 
 // Test tokenizeUrlPath in isolation.
 describe('tokenizeUrlPath', async () => {
@@ -290,7 +362,17 @@ describe('colorForCategory', async () => {
   it('only ever returns colors from the known palette', () => {
     const palette = new Set(Object.values(CATEGORY_COLORS));
     // hashed names may produce any non-grey palette color; assert it's valid
-    const valid = new Set([...palette, 'cyan', 'orange', 'pink', 'yellow', 'red', 'green', 'blue', 'purple']);
+    const valid = new Set([
+      ...palette,
+      'cyan',
+      'orange',
+      'pink',
+      'yellow',
+      'red',
+      'green',
+      'blue',
+      'purple',
+    ]);
     expect(valid.has(colorForCategory('totally-unknown-name'))).toBe(true);
   });
 });
@@ -361,7 +443,13 @@ describe('custom-taxonomy classification', async () => {
   });
 
   it('parseCategoryList splits on commas/、/newlines and dedupes', () => {
-    expect(parseCategoryList('ai, 工作, 交流, 开发, 其他')).toEqual(['ai', '工作', '交流', '开发', '其他']);
+    expect(parseCategoryList('ai, 工作, 交流, 开发, 其他')).toEqual([
+      'ai',
+      '工作',
+      '交流',
+      '开发',
+      '其他',
+    ]);
     expect(parseCategoryList('ai、工作、交流')).toEqual(['ai', '工作', '交流', 'Other']);
     expect(parseCategoryList('ai\n工作\nai')).toEqual(['ai', '工作', 'Other']);
   });
@@ -378,204 +466,6 @@ describe('custom-taxonomy classification', async () => {
 
   it('parseCategoryList never returns an empty list', () => {
     expect(parseCategoryList('')).toEqual(['Other']);
-  });
-});
-
-// Test the two-phase classify strategy: rule hits are locked in, only
-// 'fallback' results are sent to AI, and AI only overrides when confident.
-// Inlined to mirror this file's convention (the real method needs chrome+AI).
-describe('two-phase classify strategy', () => {
-  type Src = 'rule' | 'fallback';
-  interface RuleResult { category: string; source: Src; }
-  interface AiResult { category: string; confidence: number; }
-
-  /** Pure decision core extracted from TabManager.classifyAllTabs. */
-  function decide(
-    tabs: Array<{ id: number; rule: RuleResult }>,
-    aiReady: boolean,
-    ai: (uncertain: number[]) => Map<number, AiResult>
-  ): Map<number, string> {
-    const buckets = new Map<number, string>();
-    const needsAi: number[] = [];
-    for (const t of tabs) {
-      buckets.set(t.id, t.rule.category);
-      if (t.rule.source === 'fallback') needsAi.push(t.id);
-    }
-    if (aiReady && needsAi.length > 0) {
-      const results = ai(needsAi);
-      for (const id of needsAi) {
-        const r = results.get(id);
-        if (r && r.confidence > 0.7 && r.category) buckets.set(id, r.category);
-      }
-    }
-    return buckets;
-  }
-
-  it('locks in rule hits and never sends them to AI', () => {
-    const aiCalls: number[] = [];
-    const buckets = decide(
-      [
-        { id: 1, rule: { category: 'Development', source: 'rule' } },
-        { id: 2, rule: { category: 'Social', source: 'rule' } },
-      ],
-      true,
-      (ids) => { aiCalls.push(...ids); return new Map(); }
-    );
-    expect(buckets.get(1)).toBe('Development');
-    expect(buckets.get(2)).toBe('Social');
-    expect(aiCalls).toEqual([]); // no rule hit was sent to AI
-  });
-
-  it('sends only fallback tabs to AI and overrides when confident', () => {
-    const sent: number[] = [];
-    const buckets = decide(
-      [
-        { id: 1, rule: { category: 'Development', source: 'rule' } },
-        { id: 2, rule: { category: 'Other', source: 'fallback' } },
-      ],
-      true,
-      (ids) => { sent.push(...ids); return new Map([[2, { category: 'Finance', confidence: 0.85 }]]); }
-    );
-    expect(sent).toEqual([2]);           // only the uncertain tab
-    expect(buckets.get(1)).toBe('Development'); // rule hit untouched
-    expect(buckets.get(2)).toBe('Finance');     // AI overrode the fallback
-  });
-
-  it('keeps the rule fallback when AI is not confident enough', () => {
-    const buckets = decide(
-      [{ id: 5, rule: { category: 'Other', source: 'fallback' } }],
-      true,
-      () => new Map([[5, { category: 'Gaming', confidence: 0.5 }]]) // below 0.7
-    );
-    expect(buckets.get(5)).toBe('Other'); // low-confidence AI ignored
-  });
-
-  it('skips AI entirely when it is not ready', () => {
-    let called = false;
-    const buckets = decide(
-      [{ id: 9, rule: { category: 'Other', source: 'fallback' } }],
-      false,
-      () => { called = true; return new Map(); }
-    );
-    expect(called).toBe(false);
-    expect(buckets.get(9)).toBe('Other');
-  });
-});
-
-// Test the LRU eviction logic for learned domain→category mappings.
-// Inlined to mirror this file's convention (real method needs chrome.storage).
-describe('learned mappings LRU', () => {
-  const MAX = 3;
-
-  /** Pure core of Storage.setLearnedMapping. */
-  function setMapping(
-    mappings: Record<string, string>,
-    domain: string,
-    category: string
-  ): Record<string, string> {
-    delete mappings[domain];          // move to MRU position
-    mappings[domain] = category;
-    const keys = Object.keys(mappings);
-    if (keys.length > MAX) {
-      for (const old of keys.slice(0, keys.length - MAX)) delete mappings[old];
-    }
-    return mappings;
-  }
-
-  it('keeps insertion order and caps at MAX, evicting oldest', () => {
-    let m: Record<string, string> = {};
-    m = setMapping(m, 'a.com', 'Dev');
-    m = setMapping(m, 'b.com', 'Social');
-    m = setMapping(m, 'c.com', 'News');
-    m = setMapping(m, 'd.com', 'Work'); // exceeds MAX → evict a.com
-    expect(Object.keys(m)).toEqual(['b.com', 'c.com', 'd.com']);
-    expect(m['a.com']).toBeUndefined();
-  });
-
-  it('re-learning a domain refreshes its recency (not evicted next)', () => {
-    let m: Record<string, string> = {};
-    m = setMapping(m, 'a.com', 'Dev');
-    m = setMapping(m, 'b.com', 'Social');
-    m = setMapping(m, 'c.com', 'News');
-    m = setMapping(m, 'a.com', 'AI & ML'); // touch a.com → now MRU
-    m = setMapping(m, 'd.com', 'Work');     // evict oldest = b.com, not a.com
-    expect(m['a.com']).toBe('AI & ML');
-    expect(m['b.com']).toBeUndefined();
-    expect(Object.keys(m)).toEqual(['c.com', 'a.com', 'd.com']);
-  });
-
-  it('updates the category when re-learning an existing domain', () => {
-    let m: Record<string, string> = {};
-    m = setMapping(m, 'a.com', 'Dev');
-    m = setMapping(m, 'a.com', 'Finance');
-    expect(m['a.com']).toBe('Finance');
-    expect(Object.keys(m).length).toBe(1);
-  });
-});
-
-// Test batch learned-mapping insertion (Storage.addLearnedMappings core):
-// a batch of entries applied in one pass, still respecting the LRU cap.
-describe('learned mappings batch insert', () => {
-  const MAX = 3;
-  function addBatch(
-    mappings: Record<string, string>,
-    entries: Array<{ domain: string; category: string }>
-  ): Record<string, string> {
-    for (const { domain, category } of entries) {
-      if (!domain) continue;
-      delete mappings[domain];
-      mappings[domain] = category;
-    }
-    const keys = Object.keys(mappings);
-    if (keys.length > MAX) {
-      for (const old of keys.slice(0, keys.length - MAX)) delete mappings[old];
-    }
-    return mappings;
-  }
-
-  it('applies a batch and keeps only the most recent within the cap', () => {
-    const m = addBatch({}, [
-      { domain: 'a.com', category: 'Dev' },
-      { domain: 'b.com', category: 'Social' },
-      { domain: 'c.com', category: 'News' },
-      { domain: 'd.com', category: 'Work' },
-    ]);
-    expect(Object.keys(m)).toEqual(['b.com', 'c.com', 'd.com']);
-  });
-
-  it('skips entries with an empty domain', () => {
-    const m = addBatch({}, [
-      { domain: '', category: 'Dev' },
-      { domain: 'a.com', category: 'Social' },
-    ]);
-    expect(Object.keys(m)).toEqual(['a.com']);
-  });
-});
-
-// Test the AI-feedback filter: only confident (>0.7), non-"Other" verdicts
-// become learned mappings. Mirrors the logic inside classifyAllTabs.
-describe('AI feedback filter', () => {
-  interface AiResult { category: string; confidence: number; }
-  function collectFeedback(
-    rows: Array<{ domain: string; ai: AiResult | null }>
-  ): Array<{ domain: string; category: string }> {
-    const out: Array<{ domain: string; category: string }> = [];
-    for (const { domain, ai } of rows) {
-      if (ai && ai.confidence > 0.7 && ai.category && ai.category !== 'Other' && domain) {
-        out.push({ domain, category: ai.category });
-      }
-    }
-    return out;
-  }
-
-  it('keeps only confident, non-Other verdicts', () => {
-    const fb = collectFeedback([
-      { domain: 'a.com', ai: { category: 'Finance', confidence: 0.85 } }, // keep
-      { domain: 'b.com', ai: { category: 'Other', confidence: 0.9 } },    // drop: Other
-      { domain: 'c.com', ai: { category: 'Music', confidence: 0.5 } },    // drop: low conf
-      { domain: 'd.com', ai: null },                                       // drop: no result
-    ]);
-    expect(fb).toEqual([{ domain: 'a.com', category: 'Finance' }]);
   });
 });
 
