@@ -16,6 +16,10 @@
   AI understands what each tab is about — not just the URL.
 </p>
 
+<p align="center">
+  English | <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 ---
 
 ## What is TabCraft?
