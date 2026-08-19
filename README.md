@@ -105,6 +105,8 @@ later steps only run if earlier ones don't have an answer:
 
 ## Getting Started
 
+> **Note:** TabCraft is not yet published on the Chrome Web Store. Install it locally via **Load unpacked** — takes about a minute.
+
 ### Prerequisites
 
 - Node.js 18+
@@ -126,6 +128,8 @@ Then load it in Chrome:
 2. Enable **Developer mode**
 3. Click **Load unpacked**
 4. Select the `build/chrome-mv3-dev/` folder
+
+> Just want to use it (no dev server)? Run `npm install && npm run build` and load the `build/chrome-mv3-prod/` folder instead.
 
 ### Manual Setup
 
