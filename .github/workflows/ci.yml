@@ -5,18 +5,53 @@ on:
     branches: [main]
   pull_request:
 
+# This workflow only reads the repository and reports status. Nothing here needs
+# write access, so the default token is narrowed instead of inherited.
+permissions:
+  contents: read
+
+# A newer push to the same ref makes the older run's answer irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     runs-on: ubuntu-latest
+    strategy:
+      # Report every failing version, not just the first — a break on one Node
+      # release and a break on both are different bugs.
+      fail-fast: false
+      matrix:
+        # 20 is the floor documented in CONTRIBUTING; 22 is what contributors
+        # are likely running locally. Runtime APIs the extension relies on
+        # (Intl.Segmenter, AbortSignal.timeout) are version-sensitive, so one
+        # pinned version proves less than it appears to.
+        node-version: [20, 22]
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: npm
+
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
       - run: npm run build
+
+      # Lets a reviewer load the extension straight from the PR instead of
+      # building it themselves. One upload is enough — the build output does not
+      # depend on the Node version used to produce it.
+      - name: Upload unpacked extension
+        if: matrix.node-version == 20
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-mv3-prod
+          path: build/chrome-mv3-prod
+          if-no-files-found: error
+          retention-days: 14
