@@ -1,0 +1,75 @@
+name: Release
+
+# Publishing was manual: every release asset so far was a zip built on someone's
+# laptop and uploaded by hand, so nothing tied v0.1.9's zip to v0.1.9's source.
+# A tag now builds its own asset on a clean runner.
+on:
+  push:
+    tags: ['v*']
+  # Lets an existing tag be rebuilt without moving it — useful if an upload
+  # failed or an asset needs replacing.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to rebuild and attach assets to (e.g. v0.1.9)
+        required: true
+
+permissions:
+  # Needed to create the release and upload its assets. Nothing else.
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # The stale 0.1.3 version badge came from a version that lived in two
+      # places and agreed with neither. Refuse to publish a tag that disagrees
+      # with package.json rather than shipping a mislabelled zip.
+      - name: Verify tag matches package.json
+        run: |
+          pkg="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$pkg" ]; then
+            echo "::error::tag $TAG disagrees with package.json ($pkg)"
+            exit 1
+          fi
+          echo "tag and package.json agree on $pkg"
+
+      # A release is not the place to discover a broken build.
+      - run: npm run typecheck
+      - run: npm test
+
+      # `plasmo package` zips an existing build directory — it fails outright
+      # without a prior build, so the order matters.
+      - run: npm run build
+      - run: npm run package
+
+      - name: Checksum
+        working-directory: build
+        run: |
+          sha256sum chrome-mv3-prod.zip | tee chrome-mv3-prod.zip.sha256
+
+      # gh is preinstalled on the runner, so this needs no third-party action.
+      - name: Publish assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          assets="build/chrome-mv3-prod.zip build/chrome-mv3-prod.zip.sha256"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" $assets --clobber
+          else
+            gh release create "$TAG" $assets --title "$TAG" --generate-notes
+          fi
