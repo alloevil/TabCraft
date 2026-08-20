@@ -12,6 +12,8 @@
 import { TabManager } from './tab-manager';
 import { HibernationManager } from './hibernation';
 import { Storage } from './storage';
+import { ProxyBadge } from './proxy-badge';
+import { ProxyMonitor } from './proxy-monitor';
 import { getBestTab } from '../shared/duplicate';
 import type { Message, TimerHandle } from '../shared/types';
 import {
@@ -61,17 +63,34 @@ chrome.sidePanel
   ?.setPanelBehavior({ openPanelOnActionClick: true })
   .catch((err) => console.debug('[TabCraft] setPanelBehavior unsupported:', err));
 
-// React to the user toggling the duplicate badge in settings. (The settings
-// cache itself is maintained inside Storage via its own onChanged listener.)
+// React to settings the background acts on directly. (The settings cache
+// itself is maintained inside Storage via its own onChanged listener.)
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== 'local' || !changes.settings) return;
-  const prevShowBadge = changes.settings.oldValue?.showDuplicateBadge;
-  const nextShowBadge = changes.settings.newValue?.showDuplicateBadge;
-  if (prevShowBadge === nextShowBadge) return;
-  if (nextShowBadge) {
-    ready.then(updateDuplicateBadge);
-  } else {
-    chrome.action.setBadgeText({ text: '' });
+  const prev = changes.settings.oldValue;
+  const next = changes.settings.newValue;
+
+  if (prev?.showDuplicateBadge !== next?.showDuplicateBadge) {
+    if (next?.showDuplicateBadge) {
+      ready.then(updateDuplicateBadge);
+    } else {
+      chrome.action.setBadgeText({ text: '' });
+    }
+  }
+
+  // A changed controller address/secret invalidates every route learned
+  // through the old one, so drop the memo before the next lookup.
+  if (prev?.proxyApiUrl !== next?.proxyApiUrl || prev?.proxyApiSecret !== next?.proxyApiSecret) {
+    ProxyMonitor.reset().catch(() => {});
+  }
+
+  // Push the badge to (or clear it from) tabs that are already open, so
+  // toggling the feature doesn't require reloading anything.
+  const proxyBadgeChanged =
+    prev?.showProxyBadge !== next?.showProxyBadge ||
+    (next?.showProxyBadge && prev?.proxyBadgePosition !== next?.proxyBadgePosition);
+  if (proxyBadgeChanged) {
+    ProxyBadge.sweep(!!next?.showProxyBadge).catch(() => {});
   }
 });
 
@@ -97,6 +116,18 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   pendingAutoGroup.delete(tabId);
   await ready;
   await tabManager.autoGroupTab(tab);
+});
+
+// Per-page proxy indicator. Injected on load completion rather than on the
+// 'loading' edge: the document's own connection is usually still open by then,
+// and the injected badge re-asks a couple of times to catch routes the
+// controller hadn't recorded yet. Gated on the setting inside ProxyBadge, and a
+// no-op until the user grants the optional host permission. Deliberately not
+// behind `ready` — see handleMessage for why the badge never waits on the AI
+// engine warm-up.
+chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
+  if (changeInfo.status !== 'complete') return;
+  await ProxyBadge.showOn(tab);
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
@@ -305,8 +336,20 @@ async function restoreSnoozeById(id: string): Promise<boolean> {
   return true;
 }
 
-/** Handle messages from the side panel */
+/** Handle messages from the side panel and from the injected page badge. */
 async function handleMessage(message: Message): Promise<unknown> {
+  // The proxy indicator reads nothing but chrome.storage and the controller
+  // API, so it answers before the `ready` gate: warming up the AI engine can
+  // take arbitrarily long (LanguageModel.create() awaits a model download on
+  // first use), and a page's badge must not wait on that.
+  switch (message.action) {
+    case 'proxyForHost':
+      return ProxyBadge.payloadFor(message.host);
+
+    case 'proxyProbe':
+      return ProxyMonitor.probe();
+  }
+
   await ready;
   switch (message.action) {
     case 'smartGroup':

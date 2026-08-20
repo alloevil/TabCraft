@@ -49,10 +49,31 @@ auto-save and the hibernation check every 5 minutes, and to reopen snoozed
 tabs at their scheduled wake time, even after the service worker has been
 restarted.
 
+## `scripting`
+
+Used by one feature only: the optional per-page proxy indicator. When it is
+enabled, TabCraft injects a small badge into the pages you visit naming the
+proxy node that page's traffic egressed through. `scripting` by itself grants
+no access to any site — the injection also needs a host permission, which is
+optional and requested separately (see below). With the indicator off, nothing
+is ever injected.
+
 ## Host permissions
 
-TabCraft requests **no host permissions**. It never injects scripts into
-pages, never reads page content/DOM, and never fetches from page origins.
-Everything it needs — each tab's URL, title, and favicon — is tab _metadata_
-already covered by the `tabs` permission. See [PRIVACY.md](./PRIVACY.md) for
-the full data-handling policy.
+TabCraft requests **no host permissions at install time**, and none of its
+default features need any: each tab's URL, title, and favicon is tab
+_metadata_ already covered by `tabs`.
+
+`<all_urls>` is declared as an **optional** host permission, used by the
+optional per-page proxy indicator and requested only at the moment you switch
+that feature on. Granting it lets TabCraft do exactly two things:
+
+1. draw its badge into the pages you visit (write-only DOM access — the
+   injected code never reads page content), and
+2. call the Clash/mihomo controller address you configured, normally
+   `http://127.0.0.1:9097`.
+
+Switching the indicator back off revokes the permission via
+`chrome.permissions.remove`. Declining the prompt leaves the feature off.
+
+See [PRIVACY.md](./PRIVACY.md) for the full data-handling policy.

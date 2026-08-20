@@ -77,7 +77,11 @@
       "storage",
       "sidePanel",
       "contextMenus",
-      "alarms"
+      "alarms",
+      "scripting"
+    ],
+    "optional_host_permissions": [
+      "<all_urls>"
     ],
     "commands": {
       "smart-group": {

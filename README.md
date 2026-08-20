@@ -48,6 +48,7 @@ Most tab managers just group by domain. TabCraft understands what each tab is **
 | **💤 Tab Hibernation**      | Auto-suspend inactive tabs to save up to 95% memory                            |
 | **🗂️ Workspaces**           | Save and restore named snapshots of your tabs                                  |
 | **🎨 Side Panel UI**        | Modern glassmorphism interface with dark/light mode                            |
+| **🛰️ Proxy Indicator**      | Shows which proxy node each page's traffic egressed through (opt-in)           |
 | **🔒 100% Private**         | All processing runs locally. Zero data leaves your browser                     |
 
 > 📖 **New here? Read the [full usage guide → USAGE.md](USAGE.md)** — install, every button, settings, keyboard shortcuts, and how to enable on-device AI.
