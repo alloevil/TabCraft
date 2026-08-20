@@ -1,0 +1,33 @@
+# Dependabot keeps two ecosystems current: the npm tree and the actions used by
+# the workflows in .github/workflows. Security updates are already enabled at the
+# repository level; this file adds the scheduled *version* updates, which is what
+# was missing — the 28 alerts closed in 8e27b8b had to be batched by hand.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # One PR for the whole minor/patch sweep; majors stay individual so a
+    # breaking bump is never buried in a batch.
+    groups:
+      npm-minor-patch:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+    commit-message:
+      # The repo uses unscoped conventional subjects — no "(deps)" scope.
+      prefix: chore
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions-all:
+        patterns: ['*']
+    commit-message:
+      prefix: chore
