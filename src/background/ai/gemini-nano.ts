@@ -5,9 +5,9 @@
 // Both are exposed to MV3 service workers as globals — there is no `window`
 // in a service worker, so any `window.*` probe would always fail here.
 
-import type { ClassificationResult } from '../../shared/types';
+import type { ClassificationResult, TimerHandle } from '../../shared/types';
 import { CATEGORIES } from '../../shared/types';
-import { AI_CONFIDENCE } from '../../shared/constants';
+import { AI_CONFIDENCE, AI_PROBE_TIMEOUT_MS, AI_SESSION_TIMEOUT_MS } from '../../shared/constants';
 
 /** Prompt API types (not yet in TypeScript definitions) */
 interface LanguageModelSession {
@@ -36,19 +36,50 @@ declare global {
 }
 /* eslint-enable no-var */
 
+/** Resolve `promise`, or `fallback` if it hasn't settled within `ms`.
+ *
+ *  Both Prompt API entry points can wait forever: `availability()` has been
+ *  observed never settling in a service worker whose Gemini Nano model isn't
+ *  provisioned, and `create()` awaits a multi-gigabyte model download on first
+ *  use. The background's `init()` awaits this module and every ready-gated
+ *  listener and message handler awaits `init()`, so an unbounded wait here
+ *  freezes the whole extension rather than just AI classification. Past the
+ *  deadline we report "no on-device AI", which is exactly how the extension
+ *  behaves on hardware that has none: the rule engine takes over. */
+async function settleWithin<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: TimerHandle | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), ms);
+      }),
+    ]);
+  } finally {
+    // Leaving the timer armed would keep the service worker alive for no reason.
+    clearTimeout(timer);
+  }
+}
+
 /** Check if Chrome built-in AI is available */
 export async function isGeminiNanoAvailable(): Promise<boolean> {
   try {
     const lm = globalThis.LanguageModel;
     if (lm) {
-      const availability = await lm.availability();
+      const availability = await settleWithin(
+        lm.availability(),
+        AI_PROBE_TIMEOUT_MS,
+        'unavailable'
+      );
       // 'downloadable'/'downloading' count as available: create() below
       // triggers/awaits the model download on first use.
       return availability !== 'unavailable';
     }
     const legacy = globalThis.ai?.languageModel;
     if (legacy) {
-      const capabilities = await legacy.capabilities();
+      const capabilities = await settleWithin(legacy.capabilities(), AI_PROBE_TIMEOUT_MS, {
+        available: 'no' as const,
+      });
       return capabilities.available === 'readily' || capabilities.available === 'after-download';
     }
     return false;
@@ -215,7 +246,10 @@ export class GeminiNanoClassifier {
     this.available = await isGeminiNanoAvailable();
     if (this.available) {
       try {
-        this.session = await createSession();
+        this.session = await settleWithin(createSession(), AI_SESSION_TIMEOUT_MS, null);
+        // A create() that outran the deadline is still downloading; drop to the
+        // rule engine for now and pick the model up on the next worker start.
+        if (!this.session) this.available = false;
       } catch {
         this.available = false;
       }

@@ -115,3 +115,12 @@ export const AI_CONFIDENCE = {
 /** Minimum AI confidence tab-manager.ts requires before trusting an AI
  *  classification over falling back to the rule engine. */
 export const AI_TRUST_THRESHOLD = 0.7;
+
+/** Ceilings on the two Chrome Prompt API calls the AI engine makes while
+ *  initializing. Neither is bounded by the platform: `availability()` has been
+ *  observed never settling in a service worker whose model isn't provisioned,
+ *  and `create()` awaits the model download on first use. Because the
+ *  background's `ready` gate gathers both, an unbounded wait there stalls every
+ *  message handler and tab listener — not just AI classification. */
+export const AI_PROBE_TIMEOUT_MS = 3000;
+export const AI_SESSION_TIMEOUT_MS = 10000;
