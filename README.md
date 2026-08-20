@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.3-4285F4.svg?style=flat-square" alt="Version 0.1.3">
+  <img src="https://img.shields.io/badge/version-0.1.9-4285F4.svg?style=flat-square" alt="Version 0.1.9">
   <img src="https://img.shields.io/badge/Chrome-120+-34A853.svg?style=flat-square" alt="Chrome 120+">
   <img src="https://img.shields.io/badge/AI-Gemini Nano-4285F4.svg?style=flat-square" alt="Gemini Nano">
   <img src="https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square" alt="MIT License">
@@ -48,6 +48,7 @@ Most tab managers just group by domain. TabCraft understands what each tab is **
 | **💤 Tab Hibernation**      | Auto-suspend inactive tabs to save up to 95% memory                            |
 | **🗂️ Workspaces**           | Save and restore named snapshots of your tabs                                  |
 | **🎨 Side Panel UI**        | Modern glassmorphism interface with dark/light mode                            |
+| **🛰️ Proxy Indicator**      | Shows which proxy node each page's traffic egressed through (opt-in)           |
 | **🔒 100% Private**         | All processing runs locally. Zero data leaves your browser                     |
 
 > 📖 **New here? Read the [full usage guide → USAGE.md](USAGE.md)** — install, every button, settings, keyboard shortcuts, and how to enable on-device AI.
@@ -151,7 +152,7 @@ npm run build  # Production build
 | ------------- | ----------------------------------------------------------- |
 | **Framework** | [Plasmo](https://plasmo.com/) — Browser extension framework |
 | **Language**  | TypeScript                                                  |
-| **UI**        | React + Tailwind CSS                                        |
+| **UI**        | React + plain CSS with design tokens                        |
 | **AI**        | Chrome Built-in AI (Gemini Nano) + local rule engine        |
 | **Storage**   | chrome.storage.local + IndexedDB                            |
 
@@ -165,17 +166,21 @@ src/
 │   ├── ai/              # AI grouping engines
 │   │   ├── gemini-nano.ts
 │   │   └── rule-engine.ts
+│   ├── index.ts         # MV3 entry — all chrome.* listeners
 │   ├── tab-manager.ts   # Tab lifecycle management
 │   ├── hibernation.ts   # Tab hibernation strategy
-│   ├── duplicate.ts     # Duplicate detection
 │   └── storage.ts       # Data persistence
 ├── sidepanel/           # UI panel
 │   ├── components/      # React components
+│   ├── styles.css       # Hand-formatted (see .prettierignore)
 │   ├── App.tsx
 │   └── index.tsx
-├── shared/              # Shared types & utils
+├── shared/              # Pure, chrome-free helpers + shared types
 │   ├── types.ts
-│   └── constants.ts
+│   ├── constants.ts
+│   ├── domain.ts        # Domain extraction
+│   ├── duplicate.ts     # Duplicate grouping, keep-tab selection
+│   └── format.ts        # Byte / duration formatting
 └── rules/               # Seed domain rules
     └── seed-rules.json
 ```

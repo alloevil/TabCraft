@@ -1,5 +1,10 @@
 // TabCraft — Constants
 
+/** Default Clash/mihomo external-controller address. Clash Verge Rev's own
+ *  default; upstream mihomo and most other cores use port 9090 instead, which
+ *  is why this is a user-visible setting rather than a hardcoded endpoint. */
+export const PROXY_DEFAULT_API_URL = 'http://127.0.0.1:9097';
+
 /** Default settings */
 export const DEFAULT_SETTINGS = {
   autoGroup: true,
@@ -12,6 +17,10 @@ export const DEFAULT_SETTINGS = {
   aiProvider: 'gemini-nano' as const,
   learnFromActivity: false,
   language: 'en' as const,
+  showProxyBadge: false,
+  proxyApiUrl: PROXY_DEFAULT_API_URL,
+  proxyApiSecret: '',
+  proxyBadgePosition: 'bottom-right' as const,
 };
 
 /** Hibernation timeout presets (minutes) */
@@ -115,3 +124,31 @@ export const AI_CONFIDENCE = {
 /** Minimum AI confidence tab-manager.ts requires before trusting an AI
  *  classification over falling back to the rule engine. */
 export const AI_TRUST_THRESHOLD = 0.7;
+
+/** Ceilings on the two Chrome Prompt API calls the AI engine makes while
+ *  initializing. Neither is bounded by the platform: `availability()` has been
+ *  observed never settling in a service worker whose model isn't provisioned,
+ *  and `create()` awaits the model download on first use. Because the
+ *  background's `ready` gate gathers both, an unbounded wait there stalls every
+ *  message handler and tab listener — not just AI classification. */
+export const AI_PROBE_TIMEOUT_MS = 3000;
+export const AI_SESSION_TIMEOUT_MS = 10000;
+
+/** How long a fetched controller connection table is reused before the next
+ *  lookup refetches it. Sized so a burst of tabs finishing at once costs one
+ *  request, while a badge's own follow-up polls still see fresh data. */
+export const PROXY_CONNECTIONS_TTL_MS = 2000;
+
+/** Per-request timeout for controller calls. The controller is on loopback: if
+ *  it hasn't answered in this long it isn't listening, and the badge should say
+ *  so rather than hang. */
+export const PROXY_FETCH_TIMEOUT_MS = 2500;
+
+/** Max hosts kept in the route memo (oldest evicted first). Covers the hosts a
+ *  browsing session touches without letting the session-storage mirror grow
+ *  unbounded. */
+export const PROXY_HOST_MEMO_MAX = 300;
+
+/** chrome.storage.session key mirroring the route memo across MV3 service
+ *  worker restarts. */
+export const PROXY_ROUTES_SESSION_KEY = 'proxyRoutes';

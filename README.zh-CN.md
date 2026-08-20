@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.3-4285F4.svg?style=flat-square" alt="Version 0.1.3">
+  <img src="https://img.shields.io/badge/version-0.1.9-4285F4.svg?style=flat-square" alt="Version 0.1.9">
   <img src="https://img.shields.io/badge/Chrome-120+-34A853.svg?style=flat-square" alt="Chrome 120+">
   <img src="https://img.shields.io/badge/AI-Gemini Nano-4285F4.svg?style=flat-square" alt="Gemini Nano">
   <img src="https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square" alt="MIT License">
@@ -48,6 +48,7 @@ TabCraft 是一款**完全开源**的 Chrome 扩展，利用端侧 AI 自动整�
 | **💤 标签页休眠**    | 自动挂起不活跃的标签页，最多可节省 95% 内存                    |
 | **🗂️ 工作区**        | 保存并恢复带名字的标签页快照                                   |
 | **🎨 侧边栏界面**    | 现代玻璃拟态（glassmorphism）界面，支持深色/浅色模式           |
+| **🛰️ 代理指示器**    | 在每个网页显示该页流量实际走的代理出口节点（需手动开启）       |
 | **🔒 100% 隐私保护** | 所有处理均在本地完成，数据绝不离开你的浏览器                   |
 
 > 📖 **第一次用？请阅读[完整使用指南 → USAGE.md](USAGE.md)**——涵盖安装、每个按钮的作用、设置项、键盘快捷键，以及如何启用端侧 AI。
@@ -149,7 +150,7 @@ npm run build  # 生产构建
 | -------- | --------------------------------------------------- |
 | **框架** | [Plasmo](https://plasmo.com/) —— 浏览器扩展开发框架 |
 | **语言** | TypeScript                                          |
-| **UI**   | React + Tailwind CSS                                |
+| **UI**   | React + 纯 CSS（设计变量）                          |
 | **AI**   | Chrome 内置 AI（Gemini Nano）+ 本地规则引擎         |
 | **存储** | chrome.storage.local + IndexedDB                    |
 
@@ -163,17 +164,21 @@ src/
 │   ├── ai/              # AI 分组引擎
 │   │   ├── gemini-nano.ts
 │   │   └── rule-engine.ts
+│   ├── index.ts         # MV3 入口 —— 所有 chrome.* 监听器
 │   ├── tab-manager.ts   # 标签页生命周期管理
 │   ├── hibernation.ts   # 标签页休眠策略
-│   ├── duplicate.ts     # 重复检测
 │   └── storage.ts       # 数据持久化
 ├── sidepanel/           # UI 面板
 │   ├── components/      # React 组件
+│   ├── styles.css       # 手写格式，见 .prettierignore
 │   ├── App.tsx
 │   └── index.tsx
-├── shared/              # 共享类型与工具
+├── shared/              # 纯逻辑（不依赖 chrome）与共享类型
 │   ├── types.ts
-│   └── constants.ts
+│   ├── constants.ts
+│   ├── domain.ts        # 域名提取
+│   ├── duplicate.ts     # 重复分组与保留页选择
+│   └── format.ts        # 字节 / 时长格式化
 └── rules/               # 内置域名规则
     └── seed-rules.json
 ```

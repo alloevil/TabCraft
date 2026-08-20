@@ -1,8 +1,14 @@
 // TabCraft — Settings View
 
 import React, { useState, useEffect } from 'react';
-import type { Settings } from '../../shared/types';
-import { DEFAULT_SETTINGS, HIBERNATION_PRESETS, MIN_TABS_PRESETS } from '../../shared/constants';
+import type { ProxyBadgePosition, Settings } from '../../shared/types';
+import {
+  DEFAULT_SETTINGS,
+  HIBERNATION_PRESETS,
+  MIN_TABS_PRESETS,
+  PROXY_DEFAULT_API_URL,
+} from '../../shared/constants';
+import { describeApiState, type ProxyApiState } from '../../shared/proxy';
 import { useT } from '../i18n';
 import { sendMessage } from '../utils';
 
@@ -11,10 +17,20 @@ export function SettingsView() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
   const [learnedCount, setLearnedCount] = useState(0);
+  const [proxyUrlDraft, setProxyUrlDraft] = useState(DEFAULT_SETTINGS.proxyApiUrl);
+  const [proxySecretDraft, setProxySecretDraft] = useState(DEFAULT_SETTINGS.proxyApiSecret);
+  const [proxyStatus, setProxyStatus] = useState<string | null>(null);
+  const [proxyTesting, setProxyTesting] = useState(false);
 
   useEffect(() => {
     chrome.storage.local.get('settings', (result) => {
-      if (result.settings) setSettings(result.settings);
+      // Merge over defaults: a settings object written by an older version is
+      // missing every key added since, and an undefined value would blank the
+      // input it's bound to.
+      const stored: Settings = { ...DEFAULT_SETTINGS, ...(result.settings ?? {}) };
+      setSettings(stored);
+      setProxyUrlDraft(stored.proxyApiUrl);
+      setProxySecretDraft(stored.proxyApiSecret);
     });
     refreshLearnedCount();
   }, []);
@@ -79,6 +95,41 @@ export function SettingsView() {
       await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
       setSettings(DEFAULT_SETTINGS);
     }
+  }
+
+  /** The badge is the extension's only feature that touches page DOM, so it is
+   *  also the only one needing a host permission. TabCraft ships with none:
+   *  <all_urls> is declared optional and requested here, at opt-in. Declining
+   *  leaves the setting off rather than half-enabled. */
+  async function handleProxyBadgeToggle(enabled: boolean) {
+    setProxyStatus(null);
+    if (enabled) {
+      const granted = await chrome.permissions.request({ origins: ['<all_urls>'] });
+      if (!granted) {
+        setProxyStatus(t('proxyBadgeDenied'));
+        return;
+      }
+    } else {
+      // Hand the permission back when the feature goes off — nothing else uses it.
+      await chrome.permissions.remove({ origins: ['<all_urls>'] }).catch(() => {});
+    }
+    update('showProxyBadge', enabled);
+  }
+
+  async function handleProxyTest() {
+    setProxyTesting(true);
+    setProxyStatus(null);
+    const result = await sendMessage<{ state: ProxyApiState; version?: string }>({
+      action: 'proxyProbe',
+    }).catch(() => null);
+    setProxyTesting(false);
+    setProxyStatus(
+      !result
+        ? describeApiState('unreachable', settings.language).text
+        : result.state === 'ok'
+          ? t('proxyTestOk', { version: result.version ?? '?' })
+          : describeApiState(result.state, settings.language).text
+    );
   }
 
   return (
@@ -274,6 +325,83 @@ export function SettingsView() {
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <h3>{t('proxySection')}</h3>
+
+        <div className="setting-row">
+          <div className="setting-label">
+            <span>{t('proxyBadge')}</span>
+            <span className="setting-desc">{t('proxyBadgeDesc')}</span>
+          </div>
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={settings.showProxyBadge}
+              onChange={(e) => handleProxyBadgeToggle(e.target.checked)}
+            />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div className="setting-row">
+          <div className="setting-label">
+            <span>{t('proxyApiUrl')}</span>
+            <span className="setting-desc">{t('proxyApiUrlDesc')}</span>
+          </div>
+          <input
+            className="setting-input"
+            type="text"
+            spellCheck={false}
+            placeholder={PROXY_DEFAULT_API_URL}
+            value={proxyUrlDraft}
+            onChange={(e) => setProxyUrlDraft(e.target.value)}
+            onBlur={() => update('proxyApiUrl', proxyUrlDraft.trim())}
+          />
+        </div>
+
+        <div className="setting-row">
+          <div className="setting-label">
+            <span>{t('proxyApiSecret')}</span>
+            <span className="setting-desc">{t('proxyApiSecretDesc')}</span>
+          </div>
+          <input
+            className="setting-input"
+            type="password"
+            autoComplete="off"
+            value={proxySecretDraft}
+            onChange={(e) => setProxySecretDraft(e.target.value)}
+            onBlur={() => update('proxyApiSecret', proxySecretDraft)}
+          />
+        </div>
+
+        <div className="setting-row">
+          <div className="setting-label">
+            <span>{t('proxyPosition')}</span>
+            <span className="setting-desc">{t('proxyPositionDesc')}</span>
+          </div>
+          <select
+            className="setting-select"
+            value={settings.proxyBadgePosition}
+            onChange={(e) => update('proxyBadgePosition', e.target.value as ProxyBadgePosition)}
+          >
+            <option value="top-left">{t('proxyPosTopLeft')}</option>
+            <option value="top-right">{t('proxyPosTopRight')}</option>
+            <option value="bottom-left">{t('proxyPosBottomLeft')}</option>
+            <option value="bottom-right">{t('proxyPosBottomRight')}</option>
+          </select>
+        </div>
+
+        <div className="setting-row">
+          <div className="setting-label">
+            <span>{t('proxyStatusLabel')}</span>
+            {proxyStatus && <span className="setting-desc">{proxyStatus}</span>}
+          </div>
+          <button className="btn btn-secondary" onClick={handleProxyTest} disabled={proxyTesting}>
+            {proxyTesting ? t('proxyTesting') : t('proxyTest')}
+          </button>
         </div>
       </div>
 

@@ -47,6 +47,9 @@ export interface DomainRule {
   multiPurpose?: boolean;
 }
 
+/** Corner the in-page proxy badge docks to. */
+export type ProxyBadgePosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
 /** User preferences */
 export interface Settings {
   autoGroup: boolean;
@@ -59,6 +62,16 @@ export interface Settings {
   aiProvider: 'gemini-nano' | 'rule-engine';
   learnFromActivity: boolean;
   language: 'en' | 'zh';
+  /** Show a pill on every page naming the proxy node that page's traffic
+   *  actually egressed through. Off by default — it needs the optional
+   *  <all_urls> host permission, which is requested only on opt-in. */
+  showProxyBadge: boolean;
+  /** Clash / mihomo external-controller address, e.g. http://127.0.0.1:9097. */
+  proxyApiUrl: string;
+  /** Controller secret, sent as a Bearer token. Stored in chrome.storage.local
+   *  alongside every other setting; never synced, never sent anywhere else. */
+  proxyApiSecret: string;
+  proxyBadgePosition: ProxyBadgePosition;
 }
 
 /** AI classification result */
@@ -200,11 +213,13 @@ export function colorForCategory(category: string): chrome.tabGroups.ColorEnum {
   return palette[hash % palette.length];
 }
 
-/** Side panel → background message protocol. One discriminated union shared
- *  by both ends: the background's handleMessage() switches exhaustively over
+/** Background message protocol. One discriminated union shared by every
+ *  sender: the background's handleMessage() switches exhaustively over
  *  `action`, and the side panel's sendMessage() helper only accepts these
  *  shapes — a typo'd action or missing payload fails to compile instead of
- *  hitting the runtime "Unknown action" error. */
+ *  hitting the runtime "Unknown action" reply. (`proxyForHost` is also sent by
+ *  the injected page badge, which builds the literal by hand because injected
+ *  code cannot import anything.) */
 export type Message =
   | { action: 'smartGroup' }
   | { action: 'previewCustomCategories'; instruction: string }
@@ -223,4 +238,6 @@ export type Message =
   | { action: 'clearLearned' }
   | { action: 'snoozeTab'; record: SnoozeRecord }
   | { action: 'getSnoozed' }
-  | { action: 'restoreSnoozed'; id: string };
+  | { action: 'restoreSnoozed'; id: string }
+  | { action: 'proxyForHost'; host: string }
+  | { action: 'proxyProbe' };

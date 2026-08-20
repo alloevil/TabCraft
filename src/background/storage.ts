@@ -95,7 +95,10 @@ export const Storage = {
 
   async getSettings(): Promise<Settings> {
     if (settingsMemo) return settingsMemo;
-    settingsMemo = (await get('settings')) ?? DEFAULT_SETTINGS;
+    // Merge over defaults rather than `?? DEFAULT_SETTINGS`: a settings object
+    // written by an older version is missing every key added since, and those
+    // keys must read as their default instead of undefined.
+    settingsMemo = { ...DEFAULT_SETTINGS, ...((await get('settings')) ?? {}) };
     return settingsMemo;
   },
 

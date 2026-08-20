@@ -184,11 +184,14 @@
 .setting-label { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .setting-label span:first-child { font-weight: 500; font-size: 13px; }
 .setting-desc { font-size: 11px; color: var(--text-muted); }
-.setting-select {
+.setting-select, .setting-input {
   padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border-glass);
   border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none;
   min-width: 140px;
 }
+.setting-input { max-width: 160px; transition: border-color 0.2s; }
+.setting-input:focus { border-color: var(--accent); }
+.setting-input::placeholder { color: var(--text-muted); }
 .settings-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* Toggle switch */
