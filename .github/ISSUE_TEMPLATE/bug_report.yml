@@ -1,0 +1,89 @@
+name: Bug report
+description: Something in TabCraft behaves incorrectly
+labels: [bug]
+body:
+  - type: checkboxes
+    attributes:
+      label: Before filing
+      options:
+        - label: I searched [existing issues](https://github.com/alloevil/TabCraft/issues?q=is%3Aissue) and this is not a duplicate
+          required: true
+        - label: I read the relevant part of [USAGE.md](https://github.com/alloevil/TabCraft/blob/main/USAGE.md)
+          required: true
+
+  - type: textarea
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open N tabs of ...
+        2. Click Smart Group
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Chrome version
+      description: Copy the first line from `chrome://version`.
+      placeholder: '151.0.7922.138 (arm64)'
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: TabCraft version
+      description: The version on `chrome://extensions`, or the commit you built from.
+      placeholder: '0.1.9'
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: How is it installed
+      options:
+        - Release zip, loaded unpacked
+        - Built from source
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Which area
+      options:
+        - Smart grouping / classification
+        - Duplicate detection
+        - Hibernation
+        - Workspaces / snooze
+        - Side panel UI
+        - Proxy indicator
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Proxy indicator details
+      description: >
+        Only if the report involves the proxy indicator. Which core (Clash Verge,
+        mihomo, sing-box …), what the Test button reports, and what the badge
+        shows. Redact your controller secret.
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Errors from the service worker
+      description: >
+        `chrome://extensions` → TabCraft → **Service worker** → Console. Paste
+        anything red. This is usually the single most useful field.
+      render: text
+    validations:
+      required: false

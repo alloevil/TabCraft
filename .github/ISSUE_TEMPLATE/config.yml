@@ -1,0 +1,18 @@
+# Blank issues are disabled so every report arrives with a Chrome version and a
+# reproduction — the two things every triage round otherwise has to ask for.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Usage question (installing, settings, shortcuts, on-device AI)
+    url: https://github.com/alloevil/TabCraft/blob/main/USAGE.md
+    about: The full user guide. Most "how do I …" questions are answered there.
+
+  - name: Proxy indicator setup
+    url: https://github.com/alloevil/TabCraft/blob/main/USAGE.md
+    about: >
+      The badge needs the Clash/mihomo controller listening on TCP. Section 6 of
+      the guide lists the exact fields.
+
+  - name: Security vulnerability
+    url: https://github.com/alloevil/TabCraft/blob/main/SECURITY.md
+    about: Do not open a public issue. Use private vulnerability reporting.

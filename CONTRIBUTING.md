@@ -6,19 +6,22 @@ Thanks for your interest in contributing! TabCraft is a fully open-source Chrome
 
 ### Reporting Bugs
 
-1. Check [existing issues](https://github.com/alloevil/tabcraft/issues) first
-2. Open a new issue with:
-   - Clear title and description
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - Chrome version (`chrome://version`)
-   - Screenshots if applicable
+1. Check [existing issues](https://github.com/alloevil/TabCraft/issues?q=is%3Aissue) first
+2. Open a [bug report](https://github.com/alloevil/TabCraft/issues/new?template=bug_report.yml)
+
+The form asks for the things triage otherwise has to chase: Chrome version,
+TabCraft version, how it was installed, and anything red in the service worker
+console (`chrome://extensions` → TabCraft → **Service worker**).
+
+Found a security problem instead? Do not open a public issue — see
+[SECURITY.md](SECURITY.md).
 
 ### Suggesting Features
 
-1. Open a [feature request](https://github.com/alloevil/tabcraft/issues/new?template=feature_request.md)
-2. Describe the feature and use case
-3. Explain why it would be useful
+1. Open a [feature request](https://github.com/alloevil/TabCraft/issues/new?template=feature_request.yml)
+2. Lead with the problem you hit, not the implementation
+3. Two constraints any proposal has to live with: no remote server, account or
+   telemetry, and no new permission at install time
 
 ### Submitting Code
 
@@ -77,4 +80,5 @@ npm run dev
 
 ## Questions?
 
-Open a [discussion](https://github.com/alloevil/tabcraft/discussions) or reach out via issues.
+Open an [issue](https://github.com/alloevil/TabCraft/issues/new/choose). Most
+"how do I …" questions are already answered in [USAGE.md](USAGE.md).

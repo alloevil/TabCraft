@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest a capability TabCraft does not have yet
+labels: [enhancement]
+body:
+  - type: checkboxes
+    attributes:
+      label: Before filing
+      options:
+        - label: I checked [existing issues](https://github.com/alloevil/TabCraft/issues?q=is%3Aissue) and the "Coming Soon" list in the README
+          required: true
+
+  - type: textarea
+    attributes:
+      label: What problem does this solve
+      description: >
+        Describe the situation you hit, not the implementation. "I keep losing
+        research tabs across windows" is more useful than "add a tree view".
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Alternatives you considered
+      description: Including anything you tried in the current version.
+    validations:
+      required: false
+
+  - type: checkboxes
+    attributes:
+      label: Constraints this has to respect
+      description: >
+        TabCraft is local-only by design. Ticking these means you have thought
+        about whether the idea can be built without breaking that.
+      options:
+        - label: It needs no remote server, account, or telemetry
+        - label: It needs no new permission at install time (an opt-in optional permission is fine)
