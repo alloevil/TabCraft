@@ -30,9 +30,12 @@ jobs:
         node-version: [20, 22]
 
     steps:
-      - uses: actions/checkout@v4
+      # Actions are pinned to commit SHAs, not the mutable v4 tag: a tag can be
+      # repointed at new code without the workflow changing. Dependabot's
+      # github-actions ecosystem proposes the bumps.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
@@ -41,7 +44,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check
-      - run: npm test
+      # Coverage rather than a plain run: vitest.config.ts carries thresholds,
+      # and a threshold nothing enforces is a comment.
+      - run: npm run test:coverage
       - run: npm run build
 
       # Lets a reviewer load the extension straight from the PR instead of
@@ -49,7 +54,7 @@ jobs:
       # depend on the Node version used to produce it.
       - name: Upload unpacked extension
         if: matrix.node-version == 20
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: chrome-mv3-prod
           path: build/chrome-mv3-prod
