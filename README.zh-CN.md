@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.3-4285F4.svg?style=flat-square" alt="Version 0.1.3">
+  <img src="https://img.shields.io/badge/version-0.1.9-4285F4.svg?style=flat-square" alt="Version 0.1.9">
   <img src="https://img.shields.io/badge/Chrome-120+-34A853.svg?style=flat-square" alt="Chrome 120+">
   <img src="https://img.shields.io/badge/AI-Gemini Nano-4285F4.svg?style=flat-square" alt="Gemini Nano">
   <img src="https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square" alt="MIT License">
@@ -149,7 +149,7 @@ npm run build  # 生产构建
 | -------- | --------------------------------------------------- |
 | **框架** | [Plasmo](https://plasmo.com/) —— 浏览器扩展开发框架 |
 | **语言** | TypeScript                                          |
-| **UI**   | React + Tailwind CSS                                |
+| **UI**   | React + 纯 CSS（设计变量）                          |
 | **AI**   | Chrome 内置 AI（Gemini Nano）+ 本地规则引擎         |
 | **存储** | chrome.storage.local + IndexedDB                    |
 
@@ -163,17 +163,21 @@ src/
 │   ├── ai/              # AI 分组引擎
 │   │   ├── gemini-nano.ts
 │   │   └── rule-engine.ts
+│   ├── index.ts         # MV3 入口 —— 所有 chrome.* 监听器
 │   ├── tab-manager.ts   # 标签页生命周期管理
 │   ├── hibernation.ts   # 标签页休眠策略
-│   ├── duplicate.ts     # 重复检测
 │   └── storage.ts       # 数据持久化
 ├── sidepanel/           # UI 面板
 │   ├── components/      # React 组件
+│   ├── styles.css       # 手写格式，见 .prettierignore
 │   ├── App.tsx
 │   └── index.tsx
-├── shared/              # 共享类型与工具
+├── shared/              # 纯逻辑（不依赖 chrome）与共享类型
 │   ├── types.ts
-│   └── constants.ts
+│   ├── constants.ts
+│   ├── domain.ts        # 域名提取
+│   ├── duplicate.ts     # 重复分组与保留页选择
+│   └── format.ts        # 字节 / 时长格式化
 └── rules/               # 内置域名规则
     └── seed-rules.json
 ```

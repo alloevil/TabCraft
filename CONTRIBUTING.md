@@ -25,15 +25,15 @@ Thanks for your interest in contributing! TabCraft is a fully open-source Chrome
 1. Fork the repo
 2. Create a feature branch: `git checkout -b feat/my-feature`
 3. Make your changes
-4. Run tests: `npm test`
-5. Run typecheck: `npm run typecheck`
-6. Commit with [conventional commits](https://www.conventionalcommits.org/):
+4. Run the same gates CI runs: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test`, `npm run build`
+5. Commit with [conventional commits](https://www.conventionalcommits.org/) — the
+   repo uses unscoped subjects, so match that rather than introducing scopes:
    - `feat: add new feature`
    - `fix: fix bug`
    - `docs: update documentation`
    - `refactor: refactor code`
    - `test: add tests`
-7. Push and open a Pull Request
+6. Push and open a Pull Request
 
 ## Development Setup
 
@@ -59,14 +59,20 @@ npm run dev
 
 - TypeScript with strict mode
 - React functional components with hooks
-- Tailwind CSS for styling
+- Plain CSS with design tokens. Every side-panel style lives in
+  `src/sidepanel/styles.css`, which is deliberately hand-formatted and listed in
+  `.prettierignore`: compact one-rule-per-line declarations, CSS custom
+  properties for colors and radii. There is no Tailwind or PostCSS in the
+  toolchain — don't add one back for a single component.
+- Pure, chrome-free logic belongs in `src/shared/` so it can be unit-tested
+  without mocking the extension APIs
 - Follow existing patterns
 
 ## Project Structure
 
 - `src/background/` — Service Worker (MV3)
 - `src/sidepanel/` — UI panel (React)
-- `src/shared/` — Shared types and constants
+- `src/shared/` — Shared types and pure, chrome-free helpers
 - `src/rules/` — Seed domain rules
 
 ## Questions?
