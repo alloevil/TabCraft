@@ -53,6 +53,11 @@ Most tab managers just group by domain. TabCraft understands what each tab is **
 
 > 📖 **New here? Read the [full usage guide → USAGE.md](USAGE.md)** — install, every button, settings, keyboard shortcuts, and how to enable on-device AI.
 
+> 🛰️ **The proxy indicator needs one setup step.** Your Clash / mihomo core must
+> expose its controller over TCP — a unix-socket-only listener can't be reached
+> from an extension. Exact fields, the default `127.0.0.1:9097`, and why the
+> secret matters: [USAGE.md](USAGE.md).
+
 ### Coming Soon
 
 - Tab Snooze (close now, reopen later)

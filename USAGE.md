@@ -132,14 +132,26 @@ TabCraft 的主界面是 Chrome 的**侧边栏（Side Panel）**：
 
 Chrome 自己并不知道你在用哪个代理：TUN / fake-ip 模式下（Clash Verge、sing-box 等）系统代理是关着的，页面看到的对端只是 `198.18.x.x` 这类假 IP。真正知道出口的是代理内核，所以这个功能读的是内核自己的控制器 API。
 
-1. **打开内核的 external-controller。** Clash Verge Rev：设置 → 外部控制，填一个端口并记下 secret。直接用 mihomo / clash 的话在配置里写：
+1. **让内核用 TCP 监听控制器。** 只监听 unix socket 的话扩展连不上（Clash Verge 默认就是 `-ext-ctl-unix /tmp/verge/verge-mihomo.sock`），必须开一个 TCP 端口。
+
+   **Clash Verge Rev**（2.5.x）：**设置** 页 → **外部控制器监听地址 / External Controller** 一节，三个字段：
+
+   | 字段                                            | 填什么                                                             |
+   | ----------------------------------------------- | ------------------------------------------------------------------ |
+   | **启用外部控制器** / Enable External Controller | 打开                                                               |
+   | **外部控制器监听地址** / External Controller    | `127.0.0.1:9097`（Verge 的默认值）。**别填 `0.0.0.0`**，见下方警告 |
+   | **API 访问密钥** / Core Secret                  | 一串随机值。Verge 给这个字段的占位提示就是「建议设置」             |
+
+   改完**重启内核**（Verge 首页/托盘菜单里的重启内核），然后验证：`curl -s http://127.0.0.1:9097/version` 应返回 `{"meta":true,"version":"..."}`。
+
+   直接用 mihomo / clash 的话，在配置里写：
 
    ```yaml
    external-controller: 127.0.0.1:9097
-   secret: 'your-secret' # 留空也可以，填了就要在扩展里一起填
+   secret: '一串随机值' # 留空也能用，但见下方警告
    ```
 
-   注意：只监听 unix socket 时扩展连不上（Verge 默认可能是 `-ext-ctl-unix`），必须开一个 TCP 端口。
+   > ⚠️ 这个端口能切换节点、读取全部连接记录（等于浏览历史）、修改配置。所以：地址只绑 `127.0.0.1`（绑 `0.0.0.0` 会把控制权开放给整个局域网，尤其在 `allow-lan: true` 时），并且**务必设一个随机 secret**——Clash Verge 生成的配置里默认是字面量 `set-your-secret`，那是公开占位符，等于没有保护。
 
 2. **在设置里填地址和 secret**，点 **Test**。看到 `Connected — mihomo <版本>` 就是通了；否则会显示"控制器无法连接"或"控制器拒绝了密钥"。
 3. **打开 Show proxy on every page**，Chrome 会弹一次权限确认。同意后，已经打开的标签页会立刻出现标签，不用刷新。
