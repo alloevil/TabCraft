@@ -116,7 +116,7 @@ TabCraft 是一款**完全开源**的 Chrome 扩展，利用端侧 AI 自动整�
 
 ### 环境要求
 
-- Node.js 18+
+- Node.js 20+（CI 在 20 与 22 上构建；`.nvmrc` 固定推荐版本）
 - Chrome 120+（AI 功能需要 Chrome 127+）
 
 ### 快速开始

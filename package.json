@@ -26,6 +26,9 @@
     "open-source"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
