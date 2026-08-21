@@ -62,8 +62,11 @@ jobs:
       - run: npm test
 
       # `plasmo package` zips an existing build directory — it fails outright
-      # without a prior build, so the order matters.
+      # without a prior build, so the order matters. verify:build sits between
+      # them so a release can never ship bundles whose dependencies were left
+      # unresolved.
       - run: npm run build
+      - run: npm run verify:build
       - run: npm run package
 
       - name: Checksum

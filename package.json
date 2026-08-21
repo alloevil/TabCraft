@@ -28,7 +28,8 @@
   "type": "module",
   "packageManager": "npm@11.10.1",
   "engines": {
-    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
+    "browsers": "Chrome >= 120"
   },
   "scripts": {
     "dev": "plasmo dev",
@@ -40,7 +41,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify:build": "node scripts/verify-build.mjs"
   },
   "dependencies": {
     "plasmo": "^0.90.5",
