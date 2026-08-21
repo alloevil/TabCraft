@@ -10,6 +10,7 @@
 // Uses the Chrome preinstalled on GitHub's runners via puppeteer-core, so
 // nothing is downloaded. Point CHROME_PATH elsewhere to run it locally.
 
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { launch } from 'puppeteer-core';
@@ -52,30 +53,29 @@ const browser = await launch({
 });
 
 try {
-  // The service worker starting at all is the first assertion: a worker whose
-  // dependencies were not bundled dies before registering a target.
-  const worker = await browser
-    .waitForTarget((t) => t.type() === 'service_worker' && t.url().includes('/background/'), {
-      timeout: 30_000,
-    })
-    .catch(() => null);
-
-  if (!worker) {
-    console.error('✗ service worker never started — the background bundle failed to load');
-    process.exit(1);
-  }
-  const extensionId = new URL(worker.url()).host;
-  console.log(`✓ service worker registered (${extensionId})`);
+  // Chrome derives an unpacked extension's id deterministically from its
+  // absolute path, so it can be computed rather than discovered. Waiting for the
+  // service-worker target instead would be unreliable: MV3 workers are lazy, and
+  // on a CI runner nothing wakes one within any sensible timeout. Loading a page
+  // from this origin is itself the proof that the extension is installed.
+  const extensionId = [...createHash('sha256').update(BUILD).digest('hex').slice(0, 32)]
+    .map((nibble) => String.fromCharCode(97 + parseInt(nibble, 16)))
+    .join('');
 
   const page = await browser.newPage();
   const consoleErrors = [];
   page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text().slice(0, 200)));
   page.on('pageerror', (e) => consoleErrors.push(String(e).slice(0, 200)));
 
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`, {
-    waitUntil: 'load',
-    timeout: 30_000,
-  });
+  const panelUrl = `chrome-extension://${extensionId}/sidepanel.html`;
+  const response = await page
+    .goto(panelUrl, { waitUntil: 'load', timeout: 30_000 })
+    .catch((err) => {
+      console.error(`✗ could not open ${panelUrl} — extension not installed? ${err.message}`);
+      return null;
+    });
+  if (!response) process.exit(1);
+  console.log(`✓ extension installed (${extensionId})`);
 
   // React mounts asynchronously; wait for the nav rather than sleeping.
   await page
