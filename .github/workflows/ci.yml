@@ -83,8 +83,7 @@ jobs:
   # modules through Node rather than through the bundle, and `plasmo build`
   # reports success for output that cannot run — a regression that left every
   # dependency unbundled once shipped to main behind a full set of green checks.
-  # This loads the built extension into the Chrome already present on the runner
-  # and requires it to actually work.
+  # This loads the built extension into a real Chrome and requires it to work.
   smoke:
     runs-on: ubuntu-latest
     steps:
@@ -102,4 +101,22 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+
+      # Not the Chrome preinstalled on the runner. Chrome 151 refuses to load
+      # unpacked extensions — `--load-extension` is ignored and the origin then
+      # answers ERR_BLOCKED_BY_CLIENT, which is exactly how the first version of
+      # this job failed. Chrome for Testing is built for automation and has no
+      # such restriction; @puppeteer/browsers is Puppeteer's own installer, so
+      # this adds no third-party action.
+      - name: Install Chrome for Testing
+        id: chrome
+        run: |
+          # The installer prints "chrome@<version> <path>" as its last line;
+          # anything before that is progress output.
+          out="$(npx --yes @puppeteer/browsers install chrome@stable --path "$RUNNER_TEMP/chrome" | tail -1)"
+          echo "Installed: $out"
+          echo "path=${out#* }" >> "$GITHUB_OUTPUT"
+
       - run: npm run smoke
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.path }}
