@@ -119,7 +119,7 @@ later steps only run if earlier ones don't have an answer:
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+ (CI builds on 20 and 22; `.nvmrc` pins the recommended version)
 - Chrome 120+ (AI features require Chrome 127+)
 
 ### Quick Start

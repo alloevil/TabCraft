@@ -2,7 +2,7 @@
   "name": "tabcraft",
   "displayName": "TabCraft - AI Tab Manager",
   "version": "0.1.9",
-  "description": "AI-powered tab organizer for Chrome — auto-groups by topic, hibernates inactive tabs, removes duplicates. 100% private, on-device AI.",
+  "description": "AI tab organizer for Chrome — auto-groups by topic, hibernates inactive tabs, removes duplicates. 100% private, on-device AI.",
   "author": "TabCraft Contributors",
   "license": "MIT",
   "homepage": "https://github.com/alloevil/tabcraft",
@@ -26,6 +26,9 @@
     "open-source"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
