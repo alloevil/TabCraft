@@ -11,9 +11,21 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
-    # One PR for the whole minor/patch sweep; majors stay individual so a
-    # breaking bump is never buried in a batch.
+    # Group order matters: a dependency lands in the first group it matches.
     groups:
+      # react, react-dom and their @types must move as one unit — the types
+      # major has to match the runtime major. Splitting them (as happened in
+      # #20, where @types/react went to 19 while @types/react-dom stayed on 18)
+      # produces a graph npm refuses to resolve: ERESOLVE, before any test runs.
+      # No update-types filter here, so majors stay grouped too.
+      react:
+        patterns:
+          - react
+          - react-dom
+          - '@types/react'
+          - '@types/react-dom'
+      # One PR for the whole minor/patch sweep; other majors stay individual so
+      # a breaking bump is never buried in a batch.
       npm-minor-patch:
         patterns: ['*']
         update-types: ['minor', 'patch']

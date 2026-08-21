@@ -410,7 +410,7 @@ const KEYWORD_MAP: Record<string, string[]> = {
  *  scoring. Splits on /._-?=& and the like, drops pure-numeric segments
  *  (IDs, timestamps) and very short tokens that carry no topical signal. */
 export function tokenizeUrlPath(url: string): string {
-  let path = '';
+  let path: string;
   try {
     const u = new URL(url);
     path = `${u.pathname} ${u.search}`;
