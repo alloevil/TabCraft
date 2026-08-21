@@ -44,9 +44,19 @@ and the packaged extension.
 
 ### Changed
 
-- CI runs on Node 20 and 22, narrows its token to read-only, cancels superseded
-  runs, enforces coverage thresholds, and uploads the built extension so a
-  reviewer can load a pull request without building it.
+- **Node 20 is no longer supported.** It reached end-of-life on 2026-04-30, and
+  the test environment cannot run there at all — jsdom 30 declares
+  `^22.22.2 || ^24.15.0 || >=26`. CI now builds on Node 22 and 24, the lines
+  still under support.
+- The npm version is pinned through `packageManager`: this project pins
+  transitive versions with `overrides`, and npm 10 and 11 build an overridden
+  tree differently, so a lockfile written by one is rejected by the other.
+- ESLint 10 with flat config, replacing the end-of-life ESLint 8. The migration
+  is mechanical, but the new engine found a dead assignment and a stale
+  eslint-disable that ESLint 8 never checked.
+- CI narrows its token to read-only, cancels superseded runs, enforces coverage
+  thresholds, and uploads the built extension so a reviewer can load a pull
+  request without building it.
 - Manifest description trimmed to 132 characters, the Chrome Web Store maximum
   (it was 133, which would have been rejected at submission).
 
