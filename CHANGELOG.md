@@ -36,6 +36,11 @@ and the packaged extension.
 - Stale documentation: the Tailwind toolchain removed in 0.1.9 was still
   advertised, the version badge read 0.1.3, and the project tree pointed at a
   file that had moved.
+- The AI requirement was documented as Chrome 127+ (and 131+ in older release
+  notes) while the code probes the Chrome 138+ `LanguageModel` global. Both
+  READMEs and the usage guide now say 138+, which is where the Prompt API
+  became available to extensions, and the setup steps drop the `chrome://flags`
+  dance that only applied before it shipped.
 
 ### Changed
 
