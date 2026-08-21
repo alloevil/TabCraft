@@ -64,7 +64,7 @@
     "prettier": "^3.9.6",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.67.0",
-    "vitest": "^3.2.6"
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "content-security-policy-parser": "^0.6.0",
