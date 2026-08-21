@@ -78,3 +78,28 @@ jobs:
           path: build/chrome-mv3-prod
           if-no-files-found: error
           retention-days: 14
+
+  # The gate the others cannot be. typecheck, lint and the unit tests resolve
+  # modules through Node rather than through the bundle, and `plasmo build`
+  # reports success for output that cannot run — a regression that left every
+  # dependency unbundled once shipped to main behind a full set of green checks.
+  # This loads the built extension into the Chrome already present on the runner
+  # and requires it to actually work.
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Pin npm to packageManager
+        run: |
+          want="$(node -p "require('./package.json').packageManager.replace('npm@','')")"
+          [ "$(npm --version)" = "$want" ] || npm i -g "npm@$want"
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run smoke
