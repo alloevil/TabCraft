@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { extractDomain } from '../../shared/domain';
+import type { StorageSchema } from '../../shared/types';
 
 interface DashboardStats {
   totalTabs: number;
@@ -29,7 +30,7 @@ export function DashboardView() {
     const [tabs, groups, storageStats] = await Promise.all([
       chrome.tabs.query({ currentWindow: true }),
       chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT }),
-      chrome.storage.local.get('stats'),
+      chrome.storage.local.get('stats') as Promise<{ stats?: StorageSchema['stats'] }>,
     ]);
 
     const activeTabs = tabs.filter((t) => !t.discarded);

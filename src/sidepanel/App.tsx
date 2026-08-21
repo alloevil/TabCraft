@@ -11,7 +11,7 @@ import { DashboardView } from './components/DashboardView';
 import { DedupView } from './components/DedupView';
 import { LocaleProvider, translate, type Locale } from './i18n';
 import { sendMessage } from './utils';
-import type { TimerHandle } from '../shared/types';
+import type { Settings, TimerHandle } from '../shared/types';
 
 type Tab = chrome.tabs.Tab;
 type View = 'tabs' | 'tree' | 'quick' | 'rules' | 'settings' | 'workspaces' | 'dashboard' | 'dedup';
@@ -42,7 +42,7 @@ export default function App() {
     // triggered by the duplicate badge" from any other open). As a stand-in:
     // if duplicates exist right when the panel opens, land on the Dedup view
     // instead of the default tab list — the most actionable place to be.
-    chrome.storage.local.get('settings', (r) => {
+    chrome.storage.local.get('settings', (r: { settings?: Settings }) => {
       if (r.settings?.language) setLocale(r.settings.language);
       if (r.settings?.showDuplicateBadge ?? true) {
         sendMessage<Array<{ tabs: unknown[] }>>({ action: 'findDuplicates' })
@@ -53,7 +53,8 @@ export default function App() {
       }
     });
     const onStorage = (changes: { [k: string]: chrome.storage.StorageChange }) => {
-      if (changes.settings?.newValue?.language) setLocale(changes.settings.newValue.language);
+      const next = changes.settings?.newValue as Partial<Settings> | undefined;
+      if (next?.language) setLocale(next.language);
     };
     chrome.storage.onChanged.addListener(onStorage);
     // Debounced refresh: one page load fires several onUpdated events

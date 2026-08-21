@@ -60,9 +60,12 @@ export class HibernationManager {
   private async ensureCacheLoaded(): Promise<Record<number, number>> {
     if (!this.lastAccessCache) {
       this.lastAccessCache = await new Promise((resolve) => {
-        chrome.storage.local.get(LAST_ACCESS_KEY, (result) => {
-          resolve(result[LAST_ACCESS_KEY] || {});
-        });
+        chrome.storage.local.get(
+          LAST_ACCESS_KEY,
+          (result: Record<string, Record<number, number>>) => {
+            resolve(result[LAST_ACCESS_KEY] || {});
+          }
+        );
       });
     }
     return this.lastAccessCache!;

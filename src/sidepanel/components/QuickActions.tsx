@@ -8,6 +8,15 @@ interface QuickActionsProps {
   onRefresh: () => void;
 }
 
+/** One tab parked by "collapse all". Stored under the `collapsedTabs` key,
+ *  which is outside StorageSchema because only this view reads or writes it. */
+interface CollapsedTab {
+  url?: string;
+  title?: string;
+  favIconUrl?: string;
+  savedAt: number;
+}
+
 export function QuickActions({ onRefresh }: QuickActionsProps) {
   const [tabCount, setTabCount] = useState(0);
   const [memoryInfo, setMemoryInfo] = useState('');
@@ -42,8 +51,10 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
     if (toCollapse.length === 0) return;
 
     // Save URLs to storage
-    const saved = await chrome.storage.local.get('collapsedTabs');
-    const existing = saved.collapsedTabs || [];
+    const saved = (await chrome.storage.local.get('collapsedTabs')) as {
+      collapsedTabs?: CollapsedTab[];
+    };
+    const existing = saved.collapsedTabs ?? [];
     const newEntries = toCollapse.map((t) => ({
       url: t.url,
       title: t.title,
@@ -66,13 +77,15 @@ export function QuickActions({ onRefresh }: QuickActionsProps) {
 
   // Restore all collapsed tabs
   async function handleRestoreAll() {
-    const saved = await chrome.storage.local.get('collapsedTabs');
-    const collapsed = saved.collapsedTabs || [];
+    const saved = (await chrome.storage.local.get('collapsedTabs')) as {
+      collapsedTabs?: CollapsedTab[];
+    };
+    const collapsed = saved.collapsedTabs ?? [];
 
     if (collapsed.length === 0) return;
 
     // Open all URLs
-    const urls = collapsed.map((t: any) => t.url).filter(Boolean);
+    const urls = collapsed.map((t) => t.url).filter(Boolean);
     if (urls.length > 0) {
       await chrome.tabs.create({ url: urls[0] });
       for (let i = 1; i < urls.length; i++) {

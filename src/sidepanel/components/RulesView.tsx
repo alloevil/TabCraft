@@ -23,7 +23,7 @@ export function RulesView() {
   }, []);
 
   async function loadRules() {
-    const result = await chrome.storage.local.get('rules');
+    const result = (await chrome.storage.local.get('rules')) as { rules?: DomainRule[] };
     setRules(result.rules || []);
   }
 
