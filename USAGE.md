@@ -42,7 +42,7 @@ npm run build          # 产物在 build/chrome-mv3-prod/
 
 然后在 `chrome://extensions/` → 开发者模式 → 加载已解压的扩展程序，选 `build/chrome-mv3-prod/`。
 
-> **Chrome 版本要求**：基础功能需 Chrome 120+；本地 AI（Gemini Nano）需 Chrome 127+，详见[第 7 节](#7-启用本地-aigemini-nano)。未满足时会**自动回退到规则引擎**，功能不受影响。
+> **Chrome 版本要求**：基础功能需 Chrome 120+；本地 AI（Gemini Nano）需 Chrome 138+，详见[第 7 节](#7-启用本地-aigemini-nano)。未满足时会**自动回退到规则引擎**，功能不受影响。
 
 ---
 
@@ -168,17 +168,24 @@ Chrome 自己并不知道你在用哪个代理：TUN / fake-ip 模式下（Clash
 
 TabCraft 的 AI 完全在你的设备上运行（Chrome 内置的 Gemini Nano），不联网、不上传。
 
-**要求**：Chrome 127+（部分版本需要打开实验标志）。
+**要求**：Chrome **138+**。Prompt API 从 Chrome 138 起对扩展正式可用（网页端要到 148），所以在 138 及以上**不需要开任何 `chrome://flags` 实验开关**。
+
+除了浏览器版本，Chrome 对设备本身也有硬性门槛（以下为 Chrome 官方文档所列）：
+
+| 项目       | 要求                                                                                                                                                            |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 操作系统   | Windows 10/11、macOS 13+（Ventura 起）、Linux，或 Chromebook Plus 上的 ChromeOS（平台 16389.0.0 起）。Android / iOS 及非 Chromebook Plus 的 ChromeOS **不支持** |
+| 磁盘       | Chrome 配置文件所在卷至少 **22 GB** 空闲。下载后若空闲空间跌破 10 GB，模型会被自动删除，等空间恢复再重新下载                                                    |
+| 显卡或 CPU | GPU 显存**严格大于 4 GB**；或 CPU 路线：内存 ≥ 16 GB 且 ≥ 4 核                                                                                                  |
+| 网络       | 仅**首次下载模型**时需要，且需为不限量网络。之后完全离线可用，使用过程中不向 Google 或任何第三方发送数据                                                        |
 
 启用步骤：
 
-1. 确认 Chrome 版本 ≥ 127（`chrome://version`）
-2. 打开 `chrome://flags`，搜索并启用：
-   - **Prompt API for Gemini Nano** → Enabled
-   - **Enables optimization guide on device** → Enabled (BypassPerfRequirement)
-3. 重启 Chrome
-4. 打开 `chrome://components`，找到 **Optimization Guide On Device Model**，点 **检查更新**，等待模型下载完成（约 1–2 GB，仅一次）
-5. 回到 TabCraft，Settings 里 AI Provider 选 `gemini-nano`
+1. 确认 Chrome 版本 ≥ 138（`chrome://version`）
+2. Settings 里把 AI Provider 选成 `gemini-nano`
+3. 模型在**首次实际用到**时才下载。想看下载状态和模型体积，打开 `chrome://on-device-internals`
+
+**低于 138 的版本呢？** 不受支持。代码里保留了对 Chrome 138 之前那套 origin-trial 接口（`self.ai.languageModel`）的探测，所以旧版本上如果你当年开过实验开关，可能仍然能用——但这只是顺带兼容，不做保证，出问题请先升到 138+。
 
 **如果 AI 不可用会怎样？** TabCraft 会自动回退到内置规则引擎（390+ 条域名规则 + 关键词匹配），分组照常工作，只是对"标题语义"的理解不如 AI 细。你随时可以在设置里切回 `rule-engine` 强制使用规则模式。
 
