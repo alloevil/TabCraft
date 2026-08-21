@@ -23,11 +23,13 @@ jobs:
       # release and a break on both are different bugs.
       fail-fast: false
       matrix:
-        # 20 is the floor documented in CONTRIBUTING; 22 is what contributors
-        # are likely running locally. Runtime APIs the extension relies on
-        # (Intl.Segmenter, AbortSignal.timeout) are version-sensitive, so one
-        # pinned version proves less than it appears to.
-        node-version: [20, 22]
+        # The two Node lines still under support: 22 (EOL 2027-04-30) and 24
+        # (EOL 2028-04-30). Node 20 went end-of-life on 2026-04-30, and the test
+        # environment no longer runs there at all — jsdom 30 declares
+        # `^22.22.2 || ^24.15.0 || >=26`. Two versions rather than one because
+        # the extension leans on runtime APIs that shift between releases
+        # (Intl.Segmenter, AbortSignal.timeout).
+        node-version: [22, 24]
 
     steps:
       # Actions are pinned to commit SHAs, not the mutable v4 tag: a tag can be
@@ -65,7 +67,7 @@ jobs:
       # building it themselves. One upload is enough — the build output does not
       # depend on the Node version used to produce it.
       - name: Upload unpacked extension
-        if: matrix.node-version == 20
+        if: matrix.node-version == 22
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: chrome-mv3-prod

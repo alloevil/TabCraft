@@ -41,9 +41,9 @@ Found a security problem instead? Do not open a public issue — see
 > **Use the npm in `packageManager`.** This project pins transitive versions
 > through `overrides`, and npm 10 and 11 build an overridden dependency tree
 > differently — a `package-lock.json` written by one is rejected by the other
-> with `Missing: … from lock file`. Node 20 and 22 both ship npm 10, so if you
-> are on either, run `corepack enable npm` (or `npm i -g npm@11.10.1`) before
-> installing. CI pins the same version.
+> with `Missing: … from lock file`. Node 22 ships npm 10, so run
+> `corepack enable npm` (or `npm i -g npm@11.10.1`) before installing. CI pins
+> the same version.
 
 ## Development Setup
 

@@ -119,7 +119,7 @@ later steps only run if earlier ones don't have an answer:
 
 ### Prerequisites
 
-- Node.js 20+ (CI builds on 20 and 22; `.nvmrc` pins the recommended version)
+- Node.js 22+ (CI builds on 22 and 24; `.nvmrc` pins the recommended version). Node 20 reached end-of-life on 2026-04-30 and is no longer supported by the test toolchain
 - Chrome 120+ (AI features require Chrome 138+, where the Prompt API is available to extensions)
 
 ### Quick Start
