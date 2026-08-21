@@ -25,6 +25,14 @@ and the packaged extension.
 
 ### Fixed
 
+- **The extension shipped bundles with every dependency left unresolved.**
+  Declaring `engines.node` without a browser target made Parcel treat the build
+  as a Node build, which does not inline `node_modules`: `plasmo build` exited 0
+  while emitting bundles a fifth of their proper size, and both the side panel
+  and the service worker died on load with `Cannot find module
+'react/jsx-runtime'`. `engines.browsers` restores the browser target, and
+  `npm run verify:build` now asserts each bundle actually inlined the dependency
+  it cannot run without.
 - **A stuck Prompt API no longer freezes the extension.** In a service worker
   whose Gemini Nano model isn't provisioned, `LanguageModel.availability()` can
   hang forever. `init()` awaited it and every gated listener and message handler

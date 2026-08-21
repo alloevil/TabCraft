@@ -62,6 +62,10 @@ jobs:
       # and a threshold nothing enforces is a comment.
       - run: npm run test:coverage
       - run: npm run build
+      # `plasmo build` exiting 0 does not mean the extension can run: Parcel
+      # will happily emit bundles with every dependency left unresolved. This
+      # asserts they were actually inlined.
+      - run: npm run verify:build
 
       # Lets a reviewer load the extension straight from the PR instead of
       # building it themselves. One upload is enough — the build output does not
