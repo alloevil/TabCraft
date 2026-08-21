@@ -13,7 +13,7 @@ export function WorkspacesView() {
   }, []);
 
   async function loadWorkspaces() {
-    const result = await chrome.storage.local.get('workspaces');
+    const result = (await chrome.storage.local.get('workspaces')) as { workspaces?: Workspace[] };
     setWorkspaces(result.workspaces || []);
   }
 
@@ -57,7 +57,8 @@ export function WorkspacesView() {
 
     // Wait for tabs to load, then apply grouping
     setTimeout(async () => {
-      if (!win.id) return;
+      // windows.create resolves undefined when the window could not be opened.
+      if (!win?.id) return;
       const newTabs = await chrome.tabs.query({ windowId: win.id });
 
       // Create groups

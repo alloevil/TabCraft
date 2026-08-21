@@ -15,7 +15,7 @@ import { Storage } from './storage';
 import { ProxyBadge } from './proxy-badge';
 import { ProxyMonitor } from './proxy-monitor';
 import { getBestTab } from '../shared/duplicate';
-import type { Message, TimerHandle } from '../shared/types';
+import type { Message, Settings, TimerHandle } from '../shared/types';
 import {
   DUPLICATE_SCAN_DEBOUNCE_MS,
   SESSION_SAVE_DEBOUNCE_MS,
@@ -67,8 +67,11 @@ chrome.sidePanel
 // itself is maintained inside Storage via its own onChanged listener.)
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== 'local' || !changes.settings) return;
-  const prev = changes.settings.oldValue;
-  const next = changes.settings.newValue;
+  // chrome.storage is untyped by nature — @types/chrome models a StorageChange
+  // value as `{}`. This listener is the boundary where we assert the shape this
+  // extension itself wrote under the `settings` key.
+  const prev = changes.settings.oldValue as Partial<Settings> | undefined;
+  const next = changes.settings.newValue as Partial<Settings> | undefined;
 
   if (prev?.showDuplicateBadge !== next?.showDuplicateBadge) {
     if (next?.showDuplicateBadge) {

@@ -35,6 +35,14 @@ jobs:
           node-version: 20
           cache: npm
 
+      # Same reason as in ci.yml: the lockfile is only meaningful under the npm
+      # that wrote it. A release must not be the one install that drifts.
+      - name: Pin npm to packageManager
+        run: |
+          want="$(node -p "require('./package.json').packageManager.replace('npm@','')")"
+          [ "$(npm --version)" = "$want" ] || npm i -g "npm@$want"
+          npm --version
+
       - run: npm ci
 
       # The stale 0.1.3 version badge came from a version that lived in two

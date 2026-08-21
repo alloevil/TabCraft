@@ -14,11 +14,16 @@ export interface UndoSnapshot {
   createdAt: number;
 }
 
-/** Get a value from storage */
+/** Get a value from storage.
+ *
+ *  The callback result is annotated rather than inferred: @types/chrome types a
+ *  `get(key, cb)` result as `{}`, so without this the lookup below would not
+ *  compile — and inferring `any` (as older typings did) would silently drop the
+ *  schema's type information at every read. */
 async function get<K extends keyof StorageSchema>(key: K): Promise<StorageSchema[K] | null> {
   return new Promise((resolve) => {
-    chrome.storage.local.get(key, (result) => {
-      resolve(result[key] ?? null);
+    chrome.storage.local.get(key, (result: Partial<StorageSchema>) => {
+      resolve((result[key] as StorageSchema[K] | undefined) ?? null);
     });
   });
 }
@@ -314,7 +319,9 @@ export const Storage = {
 
   async getUndoStack(): Promise<UndoSnapshot[]> {
     return new Promise((resolve) => {
-      chrome.storage.local.get(UNDO_KEY, (result) => resolve(result[UNDO_KEY] ?? []));
+      chrome.storage.local.get(UNDO_KEY, (result: Record<string, UndoSnapshot[]>) =>
+        resolve(result[UNDO_KEY] ?? [])
+      );
     });
   },
 

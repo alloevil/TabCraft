@@ -40,6 +40,18 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
 
+      # npm's own version is part of the toolchain, not an implementation
+      # detail. This project pins transitive versions through `overrides`, and
+      # npm 10 and 11 materialise an overridden tree differently — a lockfile
+      # one considers in sync, the other rejects with "Missing: … from lock
+      # file". Node 20 and 22 both ship npm 10, so without this step the npm
+      # that verifies the lockfile is never the npm that wrote it.
+      - name: Pin npm to packageManager
+        run: |
+          want="$(node -p "require('./package.json').packageManager.replace('npm@','')")"
+          [ "$(npm --version)" = "$want" ] || npm i -g "npm@$want"
+          npm --version
+
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
