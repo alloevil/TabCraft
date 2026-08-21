@@ -26,6 +26,7 @@
     "open-source"
   ],
   "type": "module",
+  "packageManager": "npm@11.10.1",
   "engines": {
     "node": ">=20"
   },
