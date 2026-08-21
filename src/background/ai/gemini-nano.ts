@@ -27,14 +27,13 @@ interface LegacyLanguageModelFactory {
   create(): Promise<LanguageModelSession>;
 }
 
-/* eslint-disable no-var */
 declare global {
   // Prompt API globals — not yet in TypeScript's lib definitions, declared
-  // here so access below is type-checked instead of cast.
+  // here so access below is type-checked instead of cast. `var` is required by
+  // TypeScript for global augmentation; no lint rule in use forbids it.
   var LanguageModel: LanguageModelStatic | undefined;
   var ai: { languageModel?: LegacyLanguageModelFactory } | undefined;
 }
-/* eslint-enable no-var */
 
 /** Resolve `promise`, or `fallback` if it hasn't settled within `ms`.
  *
