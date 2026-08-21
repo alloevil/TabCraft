@@ -23,11 +23,18 @@ export default defineConfig({
       // under the current numbers: high enough that deleting existing tests
       // fails CI, low enough that it does not push anyone toward writing
       // mock-shaped tests to buy a percentage.
+      //
+      // The global numbers are not comparable to the pre-Vitest-4 ones. Vitest 3
+      // reported 100% branches and functions for files with zero coverage, which
+      // inflated the aggregate (DashboardView.tsx read `0 | 100 | 100 | 0`);
+      // Vitest 4 reports 0, so the global branch figure fell from 85% to 27.5%
+      // without a line of source changing. The shared/ tier was measuring real
+      // coverage all along and did not move.
       thresholds: {
-        statements: 35,
-        lines: 35,
-        functions: 55,
-        branches: 80,
+        statements: 26,
+        lines: 26,
+        functions: 20,
+        branches: 26,
         'src/shared/**/*.ts': {
           statements: 95,
           lines: 95,

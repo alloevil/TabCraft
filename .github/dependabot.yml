@@ -24,6 +24,13 @@ updates:
           - react-dom
           - '@types/react'
           - '@types/react-dom'
+      # vitest and its coverage provider are released in lockstep and refuse to
+      # run against a mismatched major, so a split (#29 and #30) leaves both PRs
+      # red no matter what CI does.
+      vitest:
+        patterns:
+          - vitest
+          - '@vitest/*'
       # One PR for the whole minor/patch sweep; other majors stay individual so
       # a breaking bump is never buried in a batch.
       npm-minor-patch:
