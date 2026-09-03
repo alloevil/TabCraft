@@ -8,8 +8,7 @@ updates:
   - package-ecosystem: npm
     directory: '/'
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
     open-pull-requests-limit: 5
     # Group order matters: a dependency lands in the first group it matches.
     groups:
@@ -43,8 +42,7 @@ updates:
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
     groups:
       actions-all:
         patterns: ['*']
