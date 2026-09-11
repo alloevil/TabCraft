@@ -1,6 +1,6 @@
 <p align="center">
   <img src="./assets/readme/hero.svg" width="100%"
-       alt="TabCraft — AI tab manager for Chrome: ungrouped tabs with duplicates open collapse into Development, Investment and Entertainment groups, with duplicates merged and inactive tabs hibernated, all classified on device">
+       alt="TabCraft — AI tab manager for Chrome: ungrouped tabs with duplicates open collapse into Development, Finance and Entertainment groups, with duplicates merged and inactive tabs hibernated, all classified on device">
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@ TabCraft is a **fully open-source** Chrome extension that automatically organize
 
 ### Why another tab manager?
 
-Most tab managers just group by domain. TabCraft understands what each tab is **actually about** by reading the page title and content. A localhost page called "Investment Dashboard" goes into an **Investment** group, not a **Dev** group.
+Most tab managers just group by domain. TabCraft understands what each tab is **actually about** by reading the page title and URL path. A localhost page called "Investment Dashboard" goes into a **Finance** group, not a **Dev** group.
 
 ---
 
@@ -37,19 +37,19 @@ Most tab managers just group by domain. TabCraft understands what each tab is **
        alt="Features: AI grouping, hibernation, duplicate detection, workspaces, and fully local processing">
 </p>
 
-| Feature                     | What it does                                                                   |
-| --------------------------- | ------------------------------------------------------------------------------ |
-| **🤖 AI Smart Grouping**    | Groups tabs by topic using on-device AI (Gemini Nano) with rule-based fallback |
-| **📦 Batch Classification** | Classifies many tabs in a single AI call, with per-tab fallback                |
-| **↩️ Undo Grouping**        | One-click restore of the layout before the last Smart Group                    |
-| **🧠 Self-Learning**        | Learns domain→group mappings from your manual grouping (opt-in)                |
-| **📋 Domain Rules**         | 390+ built-in rules, fully editable, import/export                             |
-| **🔍 Duplicate Detection**  | Smart URL matching that ignores tracking parameters                            |
-| **💤 Tab Hibernation**      | Auto-suspend inactive tabs to save up to 95% memory                            |
-| **🗂️ Workspaces**           | Save and restore named snapshots of your tabs                                  |
-| **🎨 Side Panel UI**        | Modern glassmorphism interface with dark/light mode                            |
-| **🛰️ Proxy Indicator**      | Shows which proxy node each page's traffic egressed through (opt-in)           |
-| **🔒 100% Private**         | All processing runs locally. Zero data leaves your browser                     |
+| Feature                     | What it does                                                                                                                        |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **🤖 AI Smart Grouping**    | Groups tabs by topic using on-device AI (Gemini Nano) with rule-based fallback                                                      |
+| **📦 Batch Classification** | Classifies many tabs in a single AI call, with per-tab fallback                                                                     |
+| **↩️ Undo Grouping**        | One-click restore of the layout before the last Smart Group                                                                         |
+| **🧠 Self-Learning**        | Learns domain→group mappings from your manual grouping and confident AI verdicts (opt-in)                                           |
+| **📋 Domain Rules**         | Custom rules layer on top of the 390 built-ins — add, edit and delete your own (covered by Settings' data export/import)            |
+| **🔍 Duplicate Detection**  | Smart URL matching that ignores tracking parameters                                                                                 |
+| **💤 Tab Hibernation**      | Auto-suspend inactive tabs to free memory (the Dashboard's ~50 MB-per-tab figure is a rough display estimate, not a measurement)    |
+| **🗂️ Workspaces**           | Save and restore named snapshots of your tabs                                                                                       |
+| **🎨 Side Panel UI**        | Modern glassmorphism interface with dark/light mode                                                                                 |
+| **🛰️ Proxy Indicator**      | Shows which proxy node each page's traffic egressed through (opt-in)                                                                |
+| **🔒 100% Private**         | All classification runs on-device; the only outbound request is to the proxy-controller address you configure (loopback by default) |
 
 > 📖 **New here? Read the [full usage guide → USAGE.md](USAGE.md)** — install, every button, settings, keyboard shortcuts, and how to enable on-device AI.
 
@@ -60,7 +60,6 @@ Most tab managers just group by domain. TabCraft understands what each tab is **
 
 ### Coming Soon
 
-- Tab Snooze (close now, reopen later)
 - Multi-AI backend (Gemini Nano + Ollama + OpenAI)
 - Firefox support
 
@@ -86,7 +85,7 @@ Most tab managers just group by domain. TabCraft understands what each tab is **
 │                         ▼            ▼            ▼          │
 │                   ┌──────────────────────────────────────┐  │
 │                   │       chrome.storage.local            │  │
-│                   │    (Rules, Settings, State)           │  │
+│                   │    (Custom Rules, Settings, State)    │  │
 │                   └──────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -97,7 +96,7 @@ Each tab is classified through a cascade, from most to least confident —
 later steps only run if earlier ones don't have an answer:
 
 1. **Learned mapping** — a domain you've manually grouped before
-2. **Domain rule** — 390+ built-in rules (e.g. `github.com` → Development)
+2. **Domain rule** — 390 built-in rules (e.g. `github.com` → Development)
 3. **Multi-purpose domain override** — a small list of platforms (X,
    Reddit, YouTube, Bilibili, TikTok, etc.) where content varies far more
    than the domain implies. These skip straight to the tab's own title
@@ -119,8 +118,8 @@ later steps only run if earlier ones don't have an answer:
 
 ### Prerequisites
 
-- Node.js 22+ (CI builds on 22 and 24; `.nvmrc` pins the recommended version). Node 20 reached end-of-life on 2026-04-30 and is no longer supported by the test toolchain
-- Chrome 120+ (AI features require Chrome 138+, where the Prompt API is available to extensions)
+- Node.js 22+ (`engines` requires `^22.22.2 || ^24.15.0 || >=26`; CI builds on 22 and 24; `.nvmrc` pins the recommended version). Node 20 reached end-of-life on 2026-04-30 and is no longer supported by the test toolchain
+- Chrome 120+ (the project's build target; AI features require Chrome 138+, where the Prompt API is available to extensions)
 
 ### Quick Start
 
@@ -153,13 +152,13 @@ npm run build  # Production build
 
 ## Tech Stack
 
-| Layer         | Technology                                                  |
-| ------------- | ----------------------------------------------------------- |
-| **Framework** | [Plasmo](https://plasmo.com/) — Browser extension framework |
-| **Language**  | TypeScript                                                  |
-| **UI**        | React + plain CSS with design tokens                        |
-| **AI**        | Chrome Built-in AI (Gemini Nano) + local rule engine        |
-| **Storage**   | chrome.storage.local + IndexedDB                            |
+| Layer         | Technology                                                                         |
+| ------------- | ---------------------------------------------------------------------------------- |
+| **Framework** | [Plasmo](https://plasmo.com/) — Browser extension framework                        |
+| **Language**  | TypeScript                                                                         |
+| **UI**        | React + plain CSS with design tokens                                               |
+| **AI**        | Chrome Built-in AI (Gemini Nano) + local rule engine                               |
+| **Storage**   | chrome.storage.local (+ chrome.storage.session for the transient proxy-route memo) |
 
 ---
 
@@ -174,6 +173,8 @@ src/
 │   ├── index.ts         # MV3 entry — all chrome.* listeners
 │   ├── tab-manager.ts   # Tab lifecycle management
 │   ├── hibernation.ts   # Tab hibernation strategy
+│   ├── proxy-badge.ts   # Proxy badge injection (opt-in)
+│   ├── proxy-monitor.ts # Clash/mihomo controller polling
 │   └── storage.ts       # Data persistence
 ├── sidepanel/           # UI panel
 │   ├── components/      # React components
@@ -185,6 +186,7 @@ src/
 │   ├── constants.ts
 │   ├── domain.ts        # Domain extraction
 │   ├── duplicate.ts     # Duplicate grouping, keep-tab selection
+│   ├── proxy.ts         # Proxy-route matching for the indicator
 │   └── format.ts        # Byte / duration formatting
 └── rules/               # Seed domain rules
     └── seed-rules.json

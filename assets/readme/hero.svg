@@ -3,7 +3,7 @@
      role="img" aria-labelledby="title desc">
   <title id="title">TabCraft — AI tab manager for Chrome, running on device</title>
   <desc id="desc">TabCraft title block next to a Chrome tab strip: five ungrouped tabs
-    with two duplicates open collapse into three topic groups (Development, Investment,
+    with two duplicates open collapse into three topic groups (Development, Finance,
     Entertainment), with the duplicates merged and an inactive tab hibernated. All
     classification happens on device, so no page data leaves the browser.</desc>
 
@@ -105,7 +105,7 @@
 
       <rect x="28" y="286" width="464" height="42" rx="8" fill="#1E2028" stroke="#2A2D37"/>
       <rect x="30" y="295" width="3" height="24" rx="1.5" fill="#4285F4"/>
-      <text x="46" y="303" font-size="20" font-weight="600" fill="#E8EAED">INVESTMENT</text>
+      <text x="46" y="303" font-size="20" font-weight="600" fill="#E8EAED">FINANCE</text>
       <text x="46" y="322" font-size="18" fill="#9AA0A6">localhost — Investment Dashboard</text>
 
       <rect x="28" y="334" width="464" height="42" rx="8" fill="#1E2028" stroke="#2A2D37"/>

@@ -49,6 +49,14 @@ and the packaged extension.
   READMEs and the usage guide now say 138+, which is where the Prompt API
   became available to extensions, and the setup steps drop the `chrome://flags`
   dance that only applied before it shipped.
+- Documentation now matches the code and data it describes: the hibernation
+  claim no longer quotes a "95%" memory saving (the code's only memory model is
+  a rough 50 MB-per-tab display estimate, not a measurement), the rule count is
+  390 rather than "390+", storage is `chrome.storage.local` plus a
+  session-scoped proxy memo rather than IndexedDB, the Rules view is described
+  as editing custom rules only (backup lives in Settings), Tab Snooze is no
+  longer listed as upcoming, and `setup.sh` enforces the Node 22 floor the
+  README and `engines` already state.
 
 ### Changed
 
@@ -65,8 +73,8 @@ and the packaged extension.
 - CI narrows its token to read-only, cancels superseded runs, enforces coverage
   thresholds, and uploads the built extension so a reviewer can load a pull
   request without building it.
-- Manifest description trimmed to 132 characters, the Chrome Web Store maximum
-  (it was 133, which would have been rejected at submission).
+- Manifest description trimmed to 125 characters (the store maximum is 132;
+  it was 133, which would have been rejected at submission).
 
 ## [0.1.9] — 2026-06-20
 
@@ -139,7 +147,7 @@ and the packaged extension.
 
 ### Added
 
-- Built-in domain rules grew from 57 to 390+, covering many more common sites so
+- Built-in domain rules grew from 57 to 390, covering many more common sites so
   fewer tabs fell through to "Other".
 
 ### Fixed

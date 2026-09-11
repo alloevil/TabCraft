@@ -8,14 +8,14 @@ echo ""
 
 # Check Node.js
 if ! command -v node &> /dev/null; then
-    echo "❌ Node.js not found. Please install Node.js 18+ first."
+    echo "❌ Node.js not found. Please install Node.js 22+ first."
     echo "   https://nodejs.org/"
     exit 1
 fi
 
 NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
-if [ "$NODE_VERSION" -lt 18 ]; then
-    echo "❌ Node.js $NODE_VERSION detected. Requires 18+."
+if [ "$NODE_VERSION" -lt 22 ]; then
+    echo "❌ Node.js $NODE_VERSION detected. Requires Node.js 22+ (engines: ^22.22.2 || ^24.15.0 || >=26)."
     exit 1
 fi
 echo "✓ Node.js $(node -v)"
