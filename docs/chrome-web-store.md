@@ -1,9 +1,9 @@
 # Chrome Web Store submission
 
 TabCraft is not on the Chrome Web Store, and that is currently its biggest
-adoption limit: unpacked loading is the only install path, and recent Chrome
-builds increasingly refuse it. On one machine tested during development, Chrome
-151 ignored `--load-extension`, reported success from the DevTools
+adoption limit: unpacked loading is the only install path, and some recent
+Chrome builds refuse it. On one machine tested during development, Chrome 151
+ignored `--load-extension`, reported success from the DevTools
 `Extensions.loadUnpacked` call while registering nothing, and left
 `chrome://extensions` empty — with developer mode already on and no Chrome policy
 file present. A store listing removes that whole class of problem.
@@ -69,7 +69,7 @@ worth leading with, because they are what differentiates the extension and both
 are verifiable from source:
 
 - Classification reads the page title and URL path, not just the domain, so a
-  localhost page titled "Investment Dashboard" lands in Investment rather than
+  localhost page titled "Investment Dashboard" lands in Finance rather than
   Dev.
 - Everything runs on-device. There is no account, no server, and no analytics —
   the extension ships with **no host permissions at all**; the only broad
