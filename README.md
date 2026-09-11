@@ -1,6 +1,6 @@
 <p align="center">
   <img src="./assets/readme/hero.svg" width="100%"
-       alt="TabCraft — AI-Powered Tab Manager for Chrome: Smart Grouping, Auto Hibernate, 100% On-Device">
+       alt="TabCraft — AI tab manager for Chrome: ungrouped tabs with duplicates open collapse into Development, Investment and Entertainment groups, with duplicates merged and inactive tabs hibernated, all classified on device">
 </p>
 
 <p align="center">
@@ -34,7 +34,7 @@ Most tab managers just group by domain. TabCraft understands what each tab is **
 
 <p align="center">
   <img src="./assets/readme/features-header.svg" width="100%"
-       alt="Features section header">
+       alt="Features: AI grouping, hibernation, duplicate detection, workspaces, and fully local processing">
 </p>
 
 | Feature                     | What it does                                                                   |
@@ -197,6 +197,10 @@ src/
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
+
+<p align="center">
+  <a href="https://github.com/oil-oil/beautify-github-readme"><img src="./assets/readme/made-with-beautify.svg" width="300" alt="README made with beautify-github-readme"></a>
+</p>
 
 ## License
 
