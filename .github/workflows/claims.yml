@@ -25,4 +25,4 @@ jobs:
       # No install step: the checks read committed files (package.json, the lockfile, the seed
       # rules, src/) with node, so `npm ci` would only add minutes. The action brings its own
       # Python, and the tool is run from its own checkout rather than installed from a registry.
-      - uses: alloevil/verify-claims@72a0fe704f1cf4c8ffa28dfd0c22622ddbadc21d # v0.1.1
+      - uses: alloevil/verify-claims@v0.1.1 # v0.1.1
