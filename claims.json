@@ -1,0 +1,673 @@
+{
+  "$comment": "The executable half of the 2026-09 documentation audit: every figure the docs publish in prose - README first screen, hero image footer, badges, the usage guide, the store kit and the permissions doc - has a command that recomputes it from committed data (package.json, the lockfile, seed-rules.json, src/shared/constants.ts, the source and the test tree), run by .github/workflows/claims.yml through alloevil/verify-claims. A doc edit that contradicts the code now fails the gate. Claims a command cannot settle carry check.manual with the receipt they do need - eight of them: the classification cascade, the memory figure being an estimate rather than a measurement, the live proxy route, undo, hibernation, dedup, Chrome's own on-device AI requirements and the Chrome 151 unpacked-load observation. CHANGELOG.md is deliberately out of scope: its history ('grew from 57 to 390', 'was documented as Chrome 127+') describes past releases and is true as written.",
+  "project": "TabCraft",
+  "repository": "https://github.com/alloevil/TabCraft",
+  "updated": "2026-09-13",
+  "claims": [
+    {
+      "id": "version-badge-current",
+      "claim": "The published version is 0.1.9: package.json, the shields.io version badge in both READMEs and the hero image's footer line all carry the same number.",
+      "value": "0.1.9",
+      "metric": "the version string in package.json, in the `badge/version-<v>` URL of README.md and README.zh-CN.md, and in the `vX.Y.Z - TypeScript` footer of assets/readme/hero.svg",
+      "method": "Plasmo copies package.json's version into the built manifest, so package.json is the only source; the badge and hero strings are hand-maintained prose. The 2026-09 audit found the badge still reading 0.1.3 (#40) and rebuilt the hero image after a stale figure. This check parses all four places and fails unless they are the same string.",
+      "repro": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");const badge=f=>{const m=fs.readFileSync(f,\"utf8\").match(/badge\\/version-([0-9.]+)-/);return m?m[1]:null};const hero=(fs.readFileSync(\"assets/readme/hero.svg\",\"utf8\").match(/v([0-9]+\\.[0-9]+\\.[0-9]+)[^<]*TypeScript/)||[])[1];const v=[p.version,badge(\"README.md\"),badge(\"README.zh-CN.md\"),hero];if(!v[0]||new Set(v).size!==1){console.error(\"version strings disagree: \"+v.join(\" / \"));process.exit(1)}console.log(v.join(\" \"))' ",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/README.md + assets/readme/hero.svg",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");const badge=f=>{const m=fs.readFileSync(f,\"utf8\").match(/badge\\/version-([0-9.]+)-/);return m?m[1]:null};const hero=(fs.readFileSync(\"assets/readme/hero.svg\",\"utf8\").match(/v([0-9]+\\.[0-9]+\\.[0-9]+)[^<]*TypeScript/)||[])[1];const v=[p.version,badge(\"README.md\"),badge(\"README.zh-CN.md\"),hero];if(!v[0]||new Set(v).size!==1){console.error(\"version strings disagree: \"+v.join(\" / \"));process.exit(1)}console.log(v.join(\" \"))' ",
+        "expect": {
+          "equals": "0.1.9 0.1.9 0.1.9 0.1.9"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "changelog-unreleased-base",
+      "claim": "The changelog's [Unreleased] section compares against the released version, v0.1.9.",
+      "value": "v0.1.9",
+      "metric": "the tag in the `[unreleased]` compare URL of CHANGELOG.md vs `v` + package.json's version",
+      "method": "Keep a Changelog's unreleased link is the one place the changelog names the version it is building on; a version bump that forgets to move it leaves the release diff pointing at an older tag. The check recomputes the tag from package.json rather than trusting the file.",
+      "repro": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");const m=(fs.readFileSync(\"CHANGELOG.md\",\"utf8\").match(/^\\[unreleased\\]: \\S*compare\\/v([0-9]+\\.[0-9]+\\.[0-9]+)\\.\\.\\.HEAD/m)||[])[1];if(m!==p.version){console.error(\"CHANGELOG unreleased base v\"+m+\" vs package.json \"+p.version);process.exit(1)}console.log(\"v\"+m)' ",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/CHANGELOG.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");const m=(fs.readFileSync(\"CHANGELOG.md\",\"utf8\").match(/^\\[unreleased\\]: \\S*compare\\/v([0-9]+\\.[0-9]+\\.[0-9]+)\\.\\.\\.HEAD/m)||[])[1];if(m!==p.version){console.error(\"CHANGELOG unreleased base v\"+m+\" vs package.json \"+p.version);process.exit(1)}console.log(\"v\"+m)' ",
+        "expect": {
+          "equals": "v0.1.9"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "built-in-rule-count",
+      "claim": "TabCraft ships exactly 390 built-in domain rules, and every place the docs quote the count says 390.",
+      "value": "390",
+      "metric": "entries in src/rules/seed-rules.json, cross-checked against the count stated in README.md, README.zh-CN.md, USAGE.md and the hero image footer",
+      "method": "seed-rules.json is the shipped rule table, so its length is the figure; the docs previously rounded it up to `390+` and the audit replaced the rounding with the exact count. A doc that stops stating the count, or reintroduces `390+`, fails.",
+      "repro": "node -e 'const fs=require(\"fs\");const n=require(\"./src/rules/seed-rules.json\").length;const files=[\"README.md\",\"README.zh-CN.md\",\"USAGE.md\",\"assets/readme/hero.svg\"];const bad=[];for(const f of files){const t=fs.readFileSync(f,\"utf8\");if(!t.includes(String(n)))bad.push(f+\" never states \"+n);if(t.includes(n+\"+\"))bad.push(f+\" inflates it to \"+n+\"+\")}if(bad.length){console.error(bad.join(\"; \"));process.exit(1)}console.log(n)' ",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/src/rules/seed-rules.json",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const n=require(\"./src/rules/seed-rules.json\").length;const files=[\"README.md\",\"README.zh-CN.md\",\"USAGE.md\",\"assets/readme/hero.svg\"];const bad=[];for(const f of files){const t=fs.readFileSync(f,\"utf8\");if(!t.includes(String(n)))bad.push(f+\" never states \"+n);if(t.includes(n+\"+\"))bad.push(f+\" inflates it to \"+n+\"+\")}if(bad.length){console.error(bad.join(\"; \"));process.exit(1)}console.log(n)' ",
+        "expect": {
+          "equals": "390"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "no-inflated-rule-count",
+      "claim": "No user-facing doc rounds a rule count up: every published rule count is exact, never `390+` or `N+ rules`.",
+      "value": "0 inflated counts",
+      "metric": "occurrences of a number followed by `+` next to `built-in`/`rule`/`rules`/`条` in README.md, README.zh-CN.md, USAGE.md, docs/chrome-web-store.md, PERMISSIONS.md and assets/readme/hero.svg",
+      "method": "One of the audit's corrections. CHANGELOG.md is deliberately excluded: its history ('built-in rules grew from 57 to 390') is a true statement about past releases, not a current figure.",
+      "repro": "node -e 'const fs=require(\"fs\");const files=[\"README.md\",\"README.zh-CN.md\",\"USAGE.md\",\"docs/chrome-web-store.md\",\"PERMISSIONS.md\",\"assets/readme/hero.svg\"];let hits=0;for(const f of files){const t=fs.readFileSync(f,\"utf8\");for(const m of t.matchAll(/[0-9]{2,}\\+\\s*(?:built-in|rules|rule|条)|(?:built-in|rules|条)\\s*[0-9]{2,}\\+/g)){hits++;console.error(f+\": \"+m[0].trim())}}console.log(hits)' ",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/README.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const files=[\"README.md\",\"README.zh-CN.md\",\"USAGE.md\",\"docs/chrome-web-store.md\",\"PERMISSIONS.md\",\"assets/readme/hero.svg\"];let hits=0;for(const f of files){const t=fs.readFileSync(f,\"utf8\");for(const m of t.matchAll(/[0-9]{2,}\\+\\s*(?:built-in|rules|rule|条)|(?:built-in|rules|条)\\s*[0-9]{2,}\\+/g)){hits++;console.error(f+\": \"+m[0].trim())}}console.log(hits)' ",
+        "expect": {
+          "equals": "0"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "chrome-build-target",
+      "claim": "The build target is Chrome 120+: engines.browsers holds `Chrome >= 120`, and both READMEs carry the Chrome-120+ badge and the `Chrome 120+` prerequisite.",
+      "value": "Chrome >= 120",
+      "metric": "the Chrome floor in package.json engines.browsers, plus the badge text and prerequisites bullet in README.md and README.zh-CN.md",
+      "method": "engines.browsers is what makes Parcel emit a browser bundle - declaring only engines.node silently produced a Node build whose dependencies were never inlined - so the string is load-bearing, and it is published to users as the badge and the prerequisites bullet.",
+      "repro": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");const m=p.engines.browsers.match(/Chrome >= ?([0-9]+)/);if(!m){console.error(\"engines.browsers: \"+p.engines.browsers);process.exit(1)}const floor=m[1];for(const f of [\"README.md\",\"README.zh-CN.md\"]){const t=fs.readFileSync(f,\"utf8\");if(!t.includes(\"Chrome-\"+floor+\"+\")){console.error(f+\": version badge is not Chrome-\"+floor+\"+\");process.exit(1)}if(!t.includes(\"Chrome \"+floor+\"+\")){console.error(f+\": prerequisites do not say Chrome \"+floor+\"+\");process.exit(1)}}console.log(p.engines.browsers)' ",
+      "evidence": "package.json (engines.browsers) + https://github.com/alloevil/TabCraft/blob/main/README.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");const m=p.engines.browsers.match(/Chrome >= ?([0-9]+)/);if(!m){console.error(\"engines.browsers: \"+p.engines.browsers);process.exit(1)}const floor=m[1];for(const f of [\"README.md\",\"README.zh-CN.md\"]){const t=fs.readFileSync(f,\"utf8\");if(!t.includes(\"Chrome-\"+floor+\"+\")){console.error(f+\": version badge is not Chrome-\"+floor+\"+\");process.exit(1)}if(!t.includes(\"Chrome \"+floor+\"+\")){console.error(f+\": prerequisites do not say Chrome \"+floor+\"+\");process.exit(1)}}console.log(p.engines.browsers)' ",
+        "expect": {
+          "equals": "Chrome >= 120"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "chrome-version-floors",
+      "claim": "Only two Chrome floors are published anywhere - 120 (the build target) and 138 (on-device AI) - and all three guides state the 138+ AI floor.",
+      "value": "3 guides state 138+; floors published: 120, 138",
+      "metric": "every `<n>+` Chrome floor between 100 and 200 across the seven doc files, plus the number of guides containing `138+`",
+      "method": "The audit found the AI requirement documented as Chrome 127+ (and 131+ in older release notes) while the code probes the Chrome 138+ LanguageModel global, and corrected every guide to 138+. Reintroducing an old floor, or inventing a new one, fails here.",
+      "repro": "node -e 'const fs=require(\"fs\");const files=[\"README.md\",\"README.zh-CN.md\",\"USAGE.md\",\"docs/chrome-web-store.md\",\"PERMISSIONS.md\",\"PRIVACY.md\",\"SECURITY.md\"];const floors=new Set();for(const f of files){const t=fs.readFileSync(f,\"utf8\");for(const m of t.matchAll(/([0-9]{2,3})\\+/g)){const n=+m[1];if(n>=100&&n<=200)floors.add(n)}}const bad=[...floors].filter(n=>n!==120&&n!==138);const stated=[\"README.md\",\"README.zh-CN.md\",\"USAGE.md\"].filter(f=>fs.readFileSync(f,\"utf8\").includes(\"138+\")).length;if(bad.length){console.error(\"unexpected version floors: \"+bad.join(\",\"));process.exit(1)}if(stated!==3){console.error(\"138+ stated in \"+stated+\" of 3 guides\");process.exit(1)}console.log(stated+\" \"+[...floors].sort((a,b)=>a-b).join(\",\"))' ",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/USAGE.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const files=[\"README.md\",\"README.zh-CN.md\",\"USAGE.md\",\"docs/chrome-web-store.md\",\"PERMISSIONS.md\",\"PRIVACY.md\",\"SECURITY.md\"];const floors=new Set();for(const f of files){const t=fs.readFileSync(f,\"utf8\");for(const m of t.matchAll(/([0-9]{2,3})\\+/g)){const n=+m[1];if(n>=100&&n<=200)floors.add(n)}}const bad=[...floors].filter(n=>n!==120&&n!==138);const stated=[\"README.md\",\"README.zh-CN.md\",\"USAGE.md\"].filter(f=>fs.readFileSync(f,\"utf8\").includes(\"138+\")).length;if(bad.length){console.error(\"unexpected version floors: \"+bad.join(\",\"));process.exit(1)}if(stated!==3){console.error(\"138+ stated in \"+stated+\" of 3 guides\");process.exit(1)}console.log(stated+\" \"+[...floors].sort((a,b)=>a-b).join(\",\"))' ",
+        "expect": {
+          "equals": "3 120,138"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "node-version-floor",
+      "claim": "The Node floor is `^22.22.2 || ^24.15.0 || >=26` in package.json, mirrored by the jsdom 30 pin recorded in the lockfile, pinned to 22 by .nvmrc, quoted verbatim in both READMEs, and enforced by setup.sh.",
+      "value": "^22.22.2 || ^24.15.0 || >=26",
+      "metric": "package.json engines.node vs the `engines.node` that package-lock.json records for node_modules/jsdom; .nvmrc; both READMEs; setup.sh's `-lt 22` guard",
+      "method": "The READMEs justify dropping Node 20 by quoting the test toolchain's own floor, so the two must agree - and the pin that decides it is jsdom 30, whose engine range the lockfile records without needing an install. The comparison normalises a trailing `.0` group because package.json writes `>=26.0.0` where the prose writes `>=26`.",
+      "repro": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\"),lock=require(\"./package-lock.json\");const norm=s=>s.replace(/\\s+/g,\" \").trim().replace(/>=([0-9]+)(?:\\.0)+$/,\">=$1\");const mine=norm(p.engines.node),theirs=norm(lock.packages[\"node_modules/jsdom\"].engines.node);if(mine!==theirs){console.error(\"engines.node \"+mine+\" vs jsdom \"+theirs);process.exit(1)}if(fs.readFileSync(\".nvmrc\",\"utf8\").trim()!==\"22\"){console.error(\".nvmrc does not pin 22\");process.exit(1)}for(const f of [\"README.md\",\"README.zh-CN.md\"]){if(!fs.readFileSync(f,\"utf8\").includes(mine)){console.error(f+\" does not quote engines.node verbatim\");process.exit(1)}}if(!/-lt 22/.test(fs.readFileSync(\"setup.sh\",\"utf8\"))){console.error(\"setup.sh does not enforce the 22 floor\");process.exit(1)}console.log(mine)' ",
+      "evidence": "package.json + package-lock.json + https://github.com/alloevil/TabCraft/blob/main/README.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\"),lock=require(\"./package-lock.json\");const norm=s=>s.replace(/\\s+/g,\" \").trim().replace(/>=([0-9]+)(?:\\.0)+$/,\">=$1\");const mine=norm(p.engines.node),theirs=norm(lock.packages[\"node_modules/jsdom\"].engines.node);if(mine!==theirs){console.error(\"engines.node \"+mine+\" vs jsdom \"+theirs);process.exit(1)}if(fs.readFileSync(\".nvmrc\",\"utf8\").trim()!==\"22\"){console.error(\".nvmrc does not pin 22\");process.exit(1)}for(const f of [\"README.md\",\"README.zh-CN.md\"]){if(!fs.readFileSync(f,\"utf8\").includes(mine)){console.error(f+\" does not quote engines.node verbatim\");process.exit(1)}}if(!/-lt 22/.test(fs.readFileSync(\"setup.sh\",\"utf8\"))){console.error(\"setup.sh does not enforce the 22 floor\");process.exit(1)}console.log(mine)' ",
+        "expect": {
+          "equals": "^22.22.2 || ^24.15.0 || >=26"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "ci-node-matrix",
+      "claim": "CI builds on Node 22 and 24 - the two lines still under support - and both READMEs state that matrix.",
+      "value": "22,24",
+      "metric": "the node-version matrix in .github/workflows/ci.yml vs the `CI builds on 22 and 24` sentence in README.md and README.zh-CN.md",
+      "method": "ci.yml carries the matrix; the README sentence is the user-visible promise. Node 20 was dropped in the audit (EOL 2026-04-30, and the test environment cannot run there), so a matrix that gains a version or the prose that drifts from it fails.",
+      "repro": "node -e 'const fs=require(\"fs\");const t=fs.readFileSync(\".github/workflows/ci.yml\",\"utf8\");const m=t.match(/node-version: \\[([0-9, ]+)\\]/);if(!m){console.error(\"no node matrix in ci.yml\");process.exit(1)}const list=m[1].split(\",\").map(s=>s.trim()).filter(Boolean);if(list.join(\",\")!==\"22,24\"){console.error(\"matrix \"+list.join(\",\"));process.exit(1)}if(!new RegExp(\"CI builds on\\\\s*\"+list[0]+\"\\\\s*and\\\\s*\"+list[1]).test(fs.readFileSync(\"README.md\",\"utf8\"))){console.error(\"README does not state the matrix\");process.exit(1)}if(!new RegExp(\"CI\\\\s*在\\\\s*\"+list[0]+\"\\\\s*与\\\\s*\"+list[1]+\"\\\\s*上构建\").test(fs.readFileSync(\"README.zh-CN.md\",\"utf8\"))){console.error(\"zh README does not state the matrix\");process.exit(1)}console.log(list.join(\",\"))' ",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/.github/workflows/ci.yml",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const t=fs.readFileSync(\".github/workflows/ci.yml\",\"utf8\");const m=t.match(/node-version: \\[([0-9, ]+)\\]/);if(!m){console.error(\"no node matrix in ci.yml\");process.exit(1)}const list=m[1].split(\",\").map(s=>s.trim()).filter(Boolean);if(list.join(\",\")!==\"22,24\"){console.error(\"matrix \"+list.join(\",\"));process.exit(1)}if(!new RegExp(\"CI builds on\\\\s*\"+list[0]+\"\\\\s*and\\\\s*\"+list[1]).test(fs.readFileSync(\"README.md\",\"utf8\"))){console.error(\"README does not state the matrix\");process.exit(1)}if(!new RegExp(\"CI\\\\s*在\\\\s*\"+list[0]+\"\\\\s*与\\\\s*\"+list[1]+\"\\\\s*上构建\").test(fs.readFileSync(\"README.zh-CN.md\",\"utf8\"))){console.error(\"zh README does not state the matrix\");process.exit(1)}console.log(list.join(\",\"))' ",
+        "expect": {
+          "equals": "22,24"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "store-description-length",
+      "claim": "The manifest description is 125 characters - under Chrome's 132-character limit - and the store submission kit quotes that exact string and length.",
+      "value": "125",
+      "metric": "length of package.json's description, plus equality with the string the store doc quotes twice and the length it states",
+      "method": "docs/chrome-web-store.md records that the shipped description was 133 characters, one over the limit Chrome enforces at upload, and shows the trimmed 125-character text. This check proves the doc's quote, the doc's stated length and the shipped description still agree.",
+      "repro": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");const d=p.description;const doc=fs.readFileSync(\"docs/chrome-web-store.md\",\"utf8\");const quoted=[...doc.matchAll(/^> (AI tab organizer.*)$/gm)].map(m=>m[1].trim());if(quoted.length!==2||quoted.some(q=>q!==d)){console.error(\"doc quotes \"+JSON.stringify(quoted)+\" vs package.json \"+JSON.stringify(d));process.exit(1)}if(d.length>132){console.error(\"description is \"+d.length+\" chars, over the 132 limit\");process.exit(1)}if(!doc.includes(\"at \"+d.length+\" characters\")){console.error(\"the store doc no longer states \"+d.length+\" characters\");process.exit(1)}console.log(d.length)' ",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/docs/chrome-web-store.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");const d=p.description;const doc=fs.readFileSync(\"docs/chrome-web-store.md\",\"utf8\");const quoted=[...doc.matchAll(/^> (AI tab organizer.*)$/gm)].map(m=>m[1].trim());if(quoted.length!==2||quoted.some(q=>q!==d)){console.error(\"doc quotes \"+JSON.stringify(quoted)+\" vs package.json \"+JSON.stringify(d));process.exit(1)}if(d.length>132){console.error(\"description is \"+d.length+\" chars, over the 132 limit\");process.exit(1)}if(!doc.includes(\"at \"+d.length+\" characters\")){console.error(\"the store doc no longer states \"+d.length+\" characters\");process.exit(1)}console.log(d.length)' ",
+        "expect": {
+          "equals": "125"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "install-permissions",
+      "claim": "TabCraft requests seven install-time permissions and no host permissions at all; `<all_urls>` is optional and asked for only when the proxy indicator is switched on - and PERMISSIONS.md justifies exactly those seven.",
+      "value": "7 permissions (tabs, tabGroups, storage, sidePanel, contextMenus, alarms, scripting) + 1 optional host permission",
+      "metric": "package.json manifest.permissions and optional_host_permissions vs the backticked permission headings in PERMISSIONS.md",
+      "method": "The store kit tells the submitter to paste one justification per permission, so PERMISSIONS.md and the manifest must name the same set; a permission added to one and not the other is a store rejection. The absence of a host_permissions key is itself checked, because PERMISSIONS.md and the store doc both make a point of it.",
+      "repro": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\"),man=p.manifest;const headed=[...fs.readFileSync(\"PERMISSIONS.md\",\"utf8\").matchAll(/^## `([a-zA-Z]+)`$/gm)].map(m=>m[1]);const a=[...man.permissions].sort().join(\",\"),b=[...headed].sort().join(\",\");if(a!==b){console.error(\"manifest [\"+a+\"] vs PERMISSIONS.md [\"+b+\"]\");process.exit(1)}if(man.host_permissions){console.error(\"a host_permissions key exists at install time\");process.exit(1)}const opt=man.optional_host_permissions;if(!Array.isArray(opt)||opt.length!==1||opt[0]!==\"<all_urls>\"){console.error(\"optional host permissions: \"+JSON.stringify(opt));process.exit(1)}if(!fs.readFileSync(\"docs/chrome-web-store.md\",\"utf8\").includes(\"no host permissions at all\")){console.error(\"the store doc no longer states that no host permission is requested\");process.exit(1)}console.log(man.permissions.length+\" \"+headed.length+\" \"+opt[0])' ",
+      "evidence": "package.json (manifest) + https://github.com/alloevil/TabCraft/blob/main/PERMISSIONS.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\"),man=p.manifest;const headed=[...fs.readFileSync(\"PERMISSIONS.md\",\"utf8\").matchAll(/^## `([a-zA-Z]+)`$/gm)].map(m=>m[1]);const a=[...man.permissions].sort().join(\",\"),b=[...headed].sort().join(\",\");if(a!==b){console.error(\"manifest [\"+a+\"] vs PERMISSIONS.md [\"+b+\"]\");process.exit(1)}if(man.host_permissions){console.error(\"a host_permissions key exists at install time\");process.exit(1)}const opt=man.optional_host_permissions;if(!Array.isArray(opt)||opt.length!==1||opt[0]!==\"<all_urls>\"){console.error(\"optional host permissions: \"+JSON.stringify(opt));process.exit(1)}if(!fs.readFileSync(\"docs/chrome-web-store.md\",\"utf8\").includes(\"no host permissions at all\")){console.error(\"the store doc no longer states that no host permission is requested\");process.exit(1)}console.log(man.permissions.length+\" \"+headed.length+\" \"+opt[0])' ",
+        "expect": {
+          "equals": "7 7 <all_urls>"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "context-menu-items",
+      "claim": "The context menu adds exactly three items - Smart Group All Tabs, Close Duplicates, Hibernate Inactive Tabs - the same three the usage guide lists.",
+      "value": "3",
+      "metric": "chrome.contextMenus.create calls in src/background/index.ts and their titles vs the three items USAGE.md documents",
+      "method": "PERMISSIONS.md justifies the contextMenus permission by counting those three items, so the count and the titles are published in two places. The check reads the titles out of the source rather than trusting either doc.",
+      "repro": "node -e 'const fs=require(\"fs\");const t=fs.readFileSync(\"src/background/index.ts\",\"utf8\");const titles=[...t.matchAll(/contextMenus\\.create\\(\\{[^}]*?title: \\x27([^\\x27]+)\\x27/g)].map(m=>m[1]);if(titles.length!==3){console.error(\"contextMenus.create calls: \"+titles.length+\" (\"+titles.join(\", \")+\")\");process.exit(1)}const usage=fs.readFileSync(\"USAGE.md\",\"utf8\");for(const x of titles){if(!usage.includes(x)){console.error(\"USAGE does not list \"+x);process.exit(1)}}console.log(titles.length+\" \"+titles.join(\" / \"))' ",
+      "evidence": "src/background/index.ts + https://github.com/alloevil/TabCraft/blob/main/PERMISSIONS.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const t=fs.readFileSync(\"src/background/index.ts\",\"utf8\");const titles=[...t.matchAll(/contextMenus\\.create\\(\\{[^}]*?title: \\x27([^\\x27]+)\\x27/g)].map(m=>m[1]);if(titles.length!==3){console.error(\"contextMenus.create calls: \"+titles.length+\" (\"+titles.join(\", \")+\")\");process.exit(1)}const usage=fs.readFileSync(\"USAGE.md\",\"utf8\");for(const x of titles){if(!usage.includes(x)){console.error(\"USAGE does not list \"+x);process.exit(1)}}console.log(titles.length+\" \"+titles.join(\" / \"))' ",
+        "expect": {
+          "equals": "3 TabCraft: Smart Group All Tabs / TabCraft: Close Duplicates / TabCraft: Hibernate Inactive Tabs"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "keyboard-shortcuts",
+      "claim": "Two keyboard shortcuts are declared - Ctrl/Command+Shift+G for Smart Group and Ctrl/Command+Shift+D for Close Duplicates - and the guide documents both bindings for both platforms.",
+      "value": "2",
+      "metric": "keys in package.json manifest.commands and their suggested_key.default/.mac vs the shortcut table in USAGE.md",
+      "method": "Plasmo writes manifest.commands into the built manifest, so package.json is the source; the bindings are user-visible (and rebindable at chrome://extensions/shortcuts), which is why the guide publishes them.",
+      "repro": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");const cmds=p.manifest.commands,keys=Object.keys(cmds);if(keys.length!==2){console.error(\"manifest commands: \"+keys.join(\",\"));process.exit(1)}const usage=fs.readFileSync(\"USAGE.md\",\"utf8\");const combos=[];for(const k of keys){const s=cmds[k].suggested_key;for(const v of [s.default,s.mac]){if(!usage.includes(v)){console.error(\"USAGE lacks \"+v);process.exit(1)}combos.push(v)}}console.log(keys.length+\" \"+combos.join(\" \"))' ",
+      "evidence": "package.json (manifest.commands) + https://github.com/alloevil/TabCraft/blob/main/USAGE.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");const cmds=p.manifest.commands,keys=Object.keys(cmds);if(keys.length!==2){console.error(\"manifest commands: \"+keys.join(\",\"));process.exit(1)}const usage=fs.readFileSync(\"USAGE.md\",\"utf8\");const combos=[];for(const k of keys){const s=cmds[k].suggested_key;for(const v of [s.default,s.mac]){if(!usage.includes(v)){console.error(\"USAGE lacks \"+v);process.exit(1)}combos.push(v)}}console.log(keys.length+\" \"+combos.join(\" \"))' ",
+        "expect": {
+          "equals": "2 Ctrl+Shift+G Command+Shift+G Ctrl+Shift+D Command+Shift+D"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "alarm-period",
+      "claim": "Both periodic alarms run every 5 minutes - the session auto-save and the hibernation check - as the permissions doc states.",
+      "value": "5 minutes",
+      "metric": "periodInMinutes of the chrome.alarms.create calls in src/background/index.ts vs the `every 5 minutes` sentence in PERMISSIONS.md",
+      "method": "The justification for the alarms permission publishes the period and names the two jobs, so the source is the receipt: setInterval scheduling is unreliable in an MV3 worker, and this is the reason the permission is requested at all.",
+      "repro": "node -e 'const fs=require(\"fs\");const t=fs.readFileSync(\"src/background/index.ts\",\"utf8\");const periods=[...t.matchAll(/alarms\\.create\\([\\s\\S]{0,160}?periodInMinutes: ([0-9]+)/g)].map(m=>+m[1]);if(periods.length!==2||periods.some(x=>x!==5)){console.error(\"periodic alarms: [\"+periods.join(\",\")+\"]\");process.exit(1)}if(!/every\\s*5\\s*minutes/.test(fs.readFileSync(\"PERMISSIONS.md\",\"utf8\"))){console.error(\"PERMISSIONS.md does not state the 5-minute period\");process.exit(1)}console.log(periods.length+\" \"+periods[0])' ",
+      "evidence": "src/background/index.ts + https://github.com/alloevil/TabCraft/blob/main/PERMISSIONS.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const t=fs.readFileSync(\"src/background/index.ts\",\"utf8\");const periods=[...t.matchAll(/alarms\\.create\\([\\s\\S]{0,160}?periodInMinutes: ([0-9]+)/g)].map(m=>+m[1]);if(periods.length!==2||periods.some(x=>x!==5)){console.error(\"periodic alarms: [\"+periods.join(\",\")+\"]\");process.exit(1)}if(!/every\\s*5\\s*minutes/.test(fs.readFileSync(\"PERMISSIONS.md\",\"utf8\"))){console.error(\"PERMISSIONS.md does not state the 5-minute period\");process.exit(1)}console.log(periods.length+\" \"+periods[0])' ",
+        "expect": {
+          "equals": "2 5"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "dedup-tracking-params",
+      "claim": "Duplicate detection compares URLs after stripping tracking parameters: TRACKING_PARAMS lists 20 of them (utm_* and friends) and both the README and the guide state the behaviour.",
+      "value": "20 parameters",
+      "metric": "entries in TRACKING_PARAMS (src/shared/constants.ts), used by src/shared/duplicate.ts, vs the README's `ignores tracking parameters` row and the guide's `去掉跟踪参数`",
+      "method": "The list is what makes `example.com/p?utm_source=x` and `example.com/p` count as duplicates; the number is not quoted in prose, so the check pins the list length and the two doc sentences that describe what it does.",
+      "repro": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const arr=c.match(/TRACKING_PARAMS = \\[([\\s\\S]*?)\\]/)[1].match(/\\x27[^\\x27]+\\x27/g)||[];if(arr.length!==20){console.error(\"TRACKING_PARAMS holds \"+arr.length+\" entries\");process.exit(1)}const dup=fs.readFileSync(\"src/shared/duplicate.ts\",\"utf8\");if(!/TRACKING_PARAMS/.test(dup)){console.error(\"duplicate.ts does not use TRACKING_PARAMS\");process.exit(1)}if(!/tracking/i.test(fs.readFileSync(\"README.md\",\"utf8\"))){console.error(\"README no longer says duplicates ignore tracking parameters\");process.exit(1)}if(!fs.readFileSync(\"USAGE.md\",\"utf8\").includes(\"去掉跟踪参数\")){console.error(\"USAGE no longer says tracking parameters are stripped\");process.exit(1)}console.log(arr.length)' ",
+      "evidence": "src/shared/constants.ts + src/shared/duplicate.ts",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const arr=c.match(/TRACKING_PARAMS = \\[([\\s\\S]*?)\\]/)[1].match(/\\x27[^\\x27]+\\x27/g)||[];if(arr.length!==20){console.error(\"TRACKING_PARAMS holds \"+arr.length+\" entries\");process.exit(1)}const dup=fs.readFileSync(\"src/shared/duplicate.ts\",\"utf8\");if(!/TRACKING_PARAMS/.test(dup)){console.error(\"duplicate.ts does not use TRACKING_PARAMS\");process.exit(1)}if(!/tracking/i.test(fs.readFileSync(\"README.md\",\"utf8\"))){console.error(\"README no longer says duplicates ignore tracking parameters\");process.exit(1)}if(!fs.readFileSync(\"USAGE.md\",\"utf8\").includes(\"去掉跟踪参数\")){console.error(\"USAGE no longer says tracking parameters are stripped\");process.exit(1)}console.log(arr.length)' ",
+        "expect": {
+          "equals": "20"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "learned-mapping-cap",
+      "claim": "Learned domain-to-group mappings are capped at 500 and evicted least-recently-used first, as the settings guide states.",
+      "value": "500",
+      "metric": "MAX_LEARNED_MAPPINGS in src/shared/constants.ts (documented there as LRU-evicted) vs the 500 in USAGE.md's Learn From Activity row",
+      "method": "The guide tells the user what the cap is; the constant is what enforces it. Raising the cap in code or in prose without the other fails.",
+      "repro": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const m=c.match(/MAX_LEARNED_MAPPINGS = ([0-9]+)/);if(!m){console.error(\"MAX_LEARNED_MAPPINGS not found\");process.exit(1)}if(!/LRU/.test(c)){console.error(\"the cap is no longer documented as LRU-evicted\");process.exit(1)}if(!fs.readFileSync(\"USAGE.md\",\"utf8\").includes(m[1])){console.error(\"USAGE does not state the \"+m[1]+\" cap\");process.exit(1)}console.log(m[1])' ",
+      "evidence": "src/shared/constants.ts + https://github.com/alloevil/TabCraft/blob/main/USAGE.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const m=c.match(/MAX_LEARNED_MAPPINGS = ([0-9]+)/);if(!m){console.error(\"MAX_LEARNED_MAPPINGS not found\");process.exit(1)}if(!/LRU/.test(c)){console.error(\"the cap is no longer documented as LRU-evicted\");process.exit(1)}if(!fs.readFileSync(\"USAGE.md\",\"utf8\").includes(m[1])){console.error(\"USAGE does not state the \"+m[1]+\" cap\");process.exit(1)}console.log(m[1])' ",
+        "expect": {
+          "equals": "500"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "undo-history-depth",
+      "claim": "Undo keeps at most 10 layout snapshots, the depth the grouping guide states.",
+      "value": "10",
+      "metric": "MAX_UNDO_HISTORY in src/shared/constants.ts vs the `10 步历史` in USAGE.md's 'how smart grouping works' section",
+      "method": "The snapshot ring is what the undo button walks; the guide publishes the depth so users know how far back a restore reaches.",
+      "repro": "node -e 'const fs=require(\"fs\");const v=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\").match(/MAX_UNDO_HISTORY = ([0-9]+)/)[1];if(!new RegExp(v+\"\\\\s*步\").test(fs.readFileSync(\"USAGE.md\",\"utf8\"))){console.error(\"USAGE does not state \"+v+\" 步 history\");process.exit(1)}console.log(v)' ",
+      "evidence": "src/shared/constants.ts + https://github.com/alloevil/TabCraft/blob/main/USAGE.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const v=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\").match(/MAX_UNDO_HISTORY = ([0-9]+)/)[1];if(!new RegExp(v+\"\\\\s*步\").test(fs.readFileSync(\"USAGE.md\",\"utf8\"))){console.error(\"USAGE does not state \"+v+\" 步 history\");process.exit(1)}console.log(v)' ",
+        "expect": {
+          "equals": "10"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "ai-prompt-timeouts",
+      "claim": "The two Chrome Prompt API probes are bounded - 3 s for availability, 10 s for session creation - the timeouts the AI guide publishes.",
+      "value": "3000 ms and 10000 ms",
+      "metric": "AI_PROBE_TIMEOUT_MS and AI_SESSION_TIMEOUT_MS vs the `3 秒 / 10 秒` line in USAGE.md section 7",
+      "method": "Neither call is bounded by the platform: availability() has been observed never settling and create() awaits the model download, and because the background's ready gate gathers both, an unbounded wait stalls every listener. The guide states the two ceilings, so code and prose are checked together.",
+      "repro": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const probe=+c.match(/AI_PROBE_TIMEOUT_MS = ([0-9]+)/)[1],sess=+c.match(/AI_SESSION_TIMEOUT_MS = ([0-9]+)/)[1];if(probe!==3000||sess!==10000){console.error(\"timeouts \"+probe+\"/\"+sess);process.exit(1)}const u=fs.readFileSync(\"USAGE.md\",\"utf8\");for(const ms of [probe,sess]){if(!new RegExp((ms/1000)+\"\\\\s*秒\").test(u)){console.error(\"USAGE does not state \"+(ms/1000)+\" 秒\");process.exit(1)}}console.log(probe+\" \"+sess)' ",
+      "evidence": "src/shared/constants.ts + https://github.com/alloevil/TabCraft/blob/main/USAGE.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const probe=+c.match(/AI_PROBE_TIMEOUT_MS = ([0-9]+)/)[1],sess=+c.match(/AI_SESSION_TIMEOUT_MS = ([0-9]+)/)[1];if(probe!==3000||sess!==10000){console.error(\"timeouts \"+probe+\"/\"+sess);process.exit(1)}const u=fs.readFileSync(\"USAGE.md\",\"utf8\");for(const ms of [probe,sess]){if(!new RegExp((ms/1000)+\"\\\\s*秒\").test(u)){console.error(\"USAGE does not state \"+(ms/1000)+\" 秒\");process.exit(1)}}console.log(probe+\" \"+sess)' ",
+        "expect": {
+          "equals": "3000 10000"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "hibernation-presets",
+      "claim": "Hibernation timeouts are chosen from 15/30/60/120 minutes with a 30-minute default, and the settings guide lists both the presets and the default.",
+      "value": "15,30,60,120 (default 30)",
+      "metric": "HIBERNATION_PRESETS and DEFAULT_SETTINGS.hibernationTimeout vs the Hibernation Timeout row of the USAGE.md settings table",
+      "method": "The presets array and the default are separate constants, so the check also proves the default is one of the choices - a default outside the picker would leave the settings UI showing a value the user cannot reselect.",
+      "repro": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const arr=c.match(/HIBERNATION_PRESETS = \\[([^\\]]+)\\]/)[1].split(\",\").map(s=>s.trim());const def=c.match(/hibernationTimeout: ([0-9]+)/)[1];if(!arr.includes(def)){console.error(\"default \"+def+\" is not among the presets \"+arr.join(\",\"));process.exit(1)}const u=fs.readFileSync(\"USAGE.md\",\"utf8\");if(!u.includes(arr.join(\"/\"))){console.error(\"USAGE does not list \"+arr.join(\"/\"));process.exit(1)}if(!new RegExp(\"\\\\|\\\\s*\"+def+\"\\\\s*分钟\").test(u)){console.error(\"USAGE default row is not \"+def+\" 分钟\");process.exit(1)}console.log(arr.join(\",\")+\" \"+def)' ",
+      "evidence": "src/shared/constants.ts + https://github.com/alloevil/TabCraft/blob/main/USAGE.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const arr=c.match(/HIBERNATION_PRESETS = \\[([^\\]]+)\\]/)[1].split(\",\").map(s=>s.trim());const def=c.match(/hibernationTimeout: ([0-9]+)/)[1];if(!arr.includes(def)){console.error(\"default \"+def+\" is not among the presets \"+arr.join(\",\"));process.exit(1)}const u=fs.readFileSync(\"USAGE.md\",\"utf8\");if(!u.includes(arr.join(\"/\"))){console.error(\"USAGE does not list \"+arr.join(\"/\"));process.exit(1)}if(!new RegExp(\"\\\\|\\\\s*\"+def+\"\\\\s*分钟\").test(u)){console.error(\"USAGE default row is not \"+def+\" 分钟\");process.exit(1)}console.log(arr.join(\",\")+\" \"+def)' ",
+        "expect": {
+          "equals": "15,30,60,120 30"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "min-tabs-presets",
+      "claim": "A group needs at least 2 tabs by default, chosen from 2/3/4/5, as the settings guide states.",
+      "value": "2 (presets 2,3,4,5)",
+      "metric": "MIN_TABS_PRESETS and DEFAULT_SETTINGS.minTabsPerGroup vs the Min Tabs Per Group row of the USAGE.md settings table",
+      "method": "Same shape as the hibernation presets: the picker and the default must agree, and the guide publishes both. The guide's FAQ also tells users that a category under this threshold does not become its own group.",
+      "repro": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const arr=c.match(/MIN_TABS_PRESETS = \\[([^\\]]+)\\]/)[1].split(\",\").map(s=>s.trim());const def=c.match(/minTabsPerGroup: ([0-9]+)/)[1];if(!arr.includes(def)){console.error(\"default \"+def+\" is not among the presets \"+arr.join(\",\"));process.exit(1)}const u=fs.readFileSync(\"USAGE.md\",\"utf8\");if(!u.includes(arr.join(\"/\"))){console.error(\"USAGE does not list \"+arr.join(\"/\"));process.exit(1)}if(!new RegExp(\"\\\\|\\\\s*\"+def+\"\\\\s*\\\\|\").test(u)){console.error(\"USAGE default row is not \"+def);process.exit(1)}console.log(arr.join(\",\")+\" \"+def)' ",
+      "evidence": "src/shared/constants.ts + https://github.com/alloevil/TabCraft/blob/main/USAGE.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const arr=c.match(/MIN_TABS_PRESETS = \\[([^\\]]+)\\]/)[1].split(\",\").map(s=>s.trim());const def=c.match(/minTabsPerGroup: ([0-9]+)/)[1];if(!arr.includes(def)){console.error(\"default \"+def+\" is not among the presets \"+arr.join(\",\"));process.exit(1)}const u=fs.readFileSync(\"USAGE.md\",\"utf8\");if(!u.includes(arr.join(\"/\"))){console.error(\"USAGE does not list \"+arr.join(\"/\"));process.exit(1)}if(!new RegExp(\"\\\\|\\\\s*\"+def+\"\\\\s*\\\\|\").test(u)){console.error(\"USAGE default row is not \"+def);process.exit(1)}console.log(arr.join(\",\")+\" \"+def)' ",
+        "expect": {
+          "equals": "2,3,4,5 2"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "sidepanel-views",
+      "claim": "The side panel exposes eight views - tabs, tree, quick, dedup, rules, settings, workspaces, dashboard - the number the usage guide publishes and the smoke gate asserts at runtime.",
+      "value": "8",
+      "metric": "entries in the nav array of src/sidepanel/App.tsx vs the `8 个视图` heading in USAGE.md and scripts/smoke-extension.mjs's EXPECTED_VIEWS",
+      "method": "Three independent places state the count: the nav array the panel renders, the guide's table of contents, and the smoke gate that fails when a view component throws during render. The check requires all three to agree, so adding a view to only one of them is caught.",
+      "repro": "node -e 'const fs=require(\"fs\");const nav=[...fs.readFileSync(\"src/sidepanel/App.tsx\",\"utf8\").matchAll(/\\{ id: \\x27([a-z]+)\\x27, icon:/g)].map(m=>m[1]);const nums=[...new Set([...fs.readFileSync(\"USAGE.md\",\"utf8\").matchAll(/([0-9]+)\\s*个视图/g)].map(m=>+m[1]))];const smoke=+fs.readFileSync(\"scripts/smoke-extension.mjs\",\"utf8\").match(/EXPECTED_VIEWS = ([0-9]+)/)[1];if(nums.length!==1||nav.length!==nums[0]||smoke!==nav.length){console.error(\"nav=\"+nav.length+\" doc=\"+nums.join(\"/\")+\" smoke=\"+smoke);process.exit(1)}console.log(nav.length+\" \"+nav.join(\",\"))' ",
+      "evidence": "src/sidepanel/App.tsx + https://github.com/alloevil/TabCraft/blob/main/USAGE.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const nav=[...fs.readFileSync(\"src/sidepanel/App.tsx\",\"utf8\").matchAll(/\\{ id: \\x27([a-z]+)\\x27, icon:/g)].map(m=>m[1]);const nums=[...new Set([...fs.readFileSync(\"USAGE.md\",\"utf8\").matchAll(/([0-9]+)\\s*个视图/g)].map(m=>+m[1]))];const smoke=+fs.readFileSync(\"scripts/smoke-extension.mjs\",\"utf8\").match(/EXPECTED_VIEWS = ([0-9]+)/)[1];if(nums.length!==1||nav.length!==nums[0]||smoke!==nav.length){console.error(\"nav=\"+nav.length+\" doc=\"+nums.join(\"/\")+\" smoke=\"+smoke);process.exit(1)}console.log(nav.length+\" \"+nav.join(\",\"))' ",
+        "expect": {
+          "equals": "8 tabs,tree,quick,dedup,rules,settings,workspaces,dashboard"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "memory-per-tab-estimate",
+      "claim": "The Dashboard's memory figure is a flat 50 MB per hibernated tab: ESTIMATED_MB_PER_TAB in the source, published as `~50 MB-per-tab` in both READMEs. Whether that is an estimate rather than a measurement is a separate claim a command cannot settle.",
+      "value": "50",
+      "metric": "ESTIMATED_MB_PER_TAB (src/shared/format.ts) and the same literal in DashboardView.tsx vs the per-tab figure in README.md and README.zh-CN.md",
+      "method": "The audit removed an old `95% memory saving` claim and both READMEs now say the figure is a rough display estimate. This check pins the number and its two occurrences in code, so the prose cannot drift from the constant the dashboard multiplies by.",
+      "repro": "node -e 'const fs=require(\"fs\");const v=fs.readFileSync(\"src/shared/format.ts\",\"utf8\").match(/ESTIMATED_MB_PER_TAB = ([0-9]+)/)[1];const d=fs.readFileSync(\"src/sidepanel/components/DashboardView.tsx\",\"utf8\").match(/hibernatedTabs \\* ([0-9]+)/)[1];if(v!==d){console.error(\"constant \"+v+\" vs dashboard literal \"+d);process.exit(1)}if(!fs.readFileSync(\"README.md\",\"utf8\").includes(v+\" MB-per-tab\")){console.error(\"README does not state \"+v+\" MB-per-tab\");process.exit(1)}if(!new RegExp(\"约\\\\s*\"+v+\"\\\\s*MB\").test(fs.readFileSync(\"README.zh-CN.md\",\"utf8\"))){console.error(\"zh README does not state 约 \"+v+\" MB\");process.exit(1)}console.log(v+\" \"+d)' ",
+      "evidence": "src/shared/format.ts + https://github.com/alloevil/TabCraft/blob/main/README.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const v=fs.readFileSync(\"src/shared/format.ts\",\"utf8\").match(/ESTIMATED_MB_PER_TAB = ([0-9]+)/)[1];const d=fs.readFileSync(\"src/sidepanel/components/DashboardView.tsx\",\"utf8\").match(/hibernatedTabs \\* ([0-9]+)/)[1];if(v!==d){console.error(\"constant \"+v+\" vs dashboard literal \"+d);process.exit(1)}if(!fs.readFileSync(\"README.md\",\"utf8\").includes(v+\" MB-per-tab\")){console.error(\"README does not state \"+v+\" MB-per-tab\");process.exit(1)}if(!new RegExp(\"约\\\\s*\"+v+\"\\\\s*MB\").test(fs.readFileSync(\"README.zh-CN.md\",\"utf8\"))){console.error(\"zh README does not state 约 \"+v+\" MB\");process.exit(1)}console.log(v+\" \"+d)' ",
+        "expect": {
+          "equals": "50 50"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "no-memory-saving-percentage",
+      "claim": "Neither README nor the guide quotes a memory-saving percentage, because the extension has no measurement to back one.",
+      "value": "0 percentage claims",
+      "metric": "occurrences of `<n>%` followed by memory/RAM/内存/省/节省 in README.md, README.zh-CN.md, USAGE.md and docs/chrome-web-store.md",
+      "method": "The audit deleted the `95% memory saving` sentence the code never supported. The pattern deliberately ignores the `100% Private` and `100% local` badges, which are privacy claims and machine-checked by proxy-only-outbound-destination.",
+      "repro": "node -e 'const fs=require(\"fs\");let hits=0;for(const f of [\"README.md\",\"README.zh-CN.md\",\"USAGE.md\",\"docs/chrome-web-store.md\"]){const t=fs.readFileSync(f,\"utf8\");for(const m of t.matchAll(/[0-9]+\\s*%\\s*(?:memory|Memory|内存|RAM|省|节省)/g)){hits++;console.error(f+\": \"+m[0].trim())}}console.log(hits)' ",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/README.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");let hits=0;for(const f of [\"README.md\",\"README.zh-CN.md\",\"USAGE.md\",\"docs/chrome-web-store.md\"]){const t=fs.readFileSync(f,\"utf8\");for(const m of t.matchAll(/[0-9]+\\s*%\\s*(?:memory|Memory|内存|RAM|省|节省)/g)){hits++;console.error(f+\": \"+m[0].trim())}}console.log(hits)' ",
+        "expect": {
+          "equals": "0"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "storage-local-plus-session-memo",
+      "claim": "Data lives in chrome.storage.local; the only other store is a session-scoped proxy-route memo under the `proxyRoutes` key in chrome.storage.session, and no IndexedDB exists anywhere in the source.",
+      "value": "0 IndexedDB references; session key `proxyRoutes`",
+      "metric": "indexedDB references across src (tests excluded), the PROXY_ROUTES_SESSION_KEY constant and its use in src/background/proxy-monitor.ts, and the README Tech Stack storage row",
+      "method": "The audit corrected docs that had claimed IndexedDB. chrome.storage.session is what keeps the route memo across MV3 service-worker restarts, so the constant and its single consumer are both checked; the README row is the published form.",
+      "repro": "node -e 'const fs=require(\"fs\");const walk=d=>fs.readdirSync(d,{recursive:true}).map(String).filter(f=>/\\.(ts|tsx)$/.test(f)&&!f.includes(\"__tests__\")).map(f=>d+\"/\"+f);const files=walk(\"src\");let idb=0;for(const f of files){idb+=(fs.readFileSync(f,\"utf8\").match(/indexedDB/gi)||[]).length}if(idb){console.error(\"indexedDB references: \"+idb);process.exit(1)}const key=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\").match(/PROXY_ROUTES_SESSION_KEY = \\x27([^\\x27]+)\\x27/)[1];if(!fs.readFileSync(\"src/background/proxy-monitor.ts\",\"utf8\").includes(\"chrome.storage.session\")){console.error(\"proxy-monitor.ts does not mirror the memo through chrome.storage.session\");process.exit(1)}const r=fs.readFileSync(\"README.md\",\"utf8\");for(const needle of [\"chrome.storage.local\",\"chrome.storage.session\"]){if(!r.includes(needle)){console.error(\"README Tech Stack lacks \"+needle);process.exit(1)}}console.log(idb+\" \"+key)' ",
+      "evidence": "src/shared/constants.ts + src/background/proxy-monitor.ts + https://github.com/alloevil/TabCraft/blob/main/README.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const walk=d=>fs.readdirSync(d,{recursive:true}).map(String).filter(f=>/\\.(ts|tsx)$/.test(f)&&!f.includes(\"__tests__\")).map(f=>d+\"/\"+f);const files=walk(\"src\");let idb=0;for(const f of files){idb+=(fs.readFileSync(f,\"utf8\").match(/indexedDB/gi)||[]).length}if(idb){console.error(\"indexedDB references: \"+idb);process.exit(1)}const key=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\").match(/PROXY_ROUTES_SESSION_KEY = \\x27([^\\x27]+)\\x27/)[1];if(!fs.readFileSync(\"src/background/proxy-monitor.ts\",\"utf8\").includes(\"chrome.storage.session\")){console.error(\"proxy-monitor.ts does not mirror the memo through chrome.storage.session\");process.exit(1)}const r=fs.readFileSync(\"README.md\",\"utf8\");for(const needle of [\"chrome.storage.local\",\"chrome.storage.session\"]){if(!r.includes(needle)){console.error(\"README Tech Stack lacks \"+needle);process.exit(1)}}console.log(idb+\" \"+key)' ",
+        "expect": {
+          "equals": "0 proxyRoutes"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "proxy-controller-default",
+      "claim": "The default Clash/mihomo controller address is http://127.0.0.1:9097, the value published in both READMEs, the usage guide and the permissions doc.",
+      "value": "http://127.0.0.1:9097",
+      "metric": "PROXY_DEFAULT_API_URL (src/shared/constants.ts) and DEFAULT_SETTINGS.proxyApiUrl vs the host:port quoted in README.md, README.zh-CN.md, USAGE.md and PERMISSIONS.md",
+      "method": "The comment next to the constant explains why it is a user setting rather than a hardcoded endpoint (Clash Verge Rev defaults to 9097, upstream mihomo to 9090); the docs quote the same default four times, so the check requires the constant, the default setting and every quote to agree.",
+      "repro": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const v=c.match(/PROXY_DEFAULT_API_URL = \\x27([^\\x27]+)\\x27/)[1];if(v!==\"http://127.0.0.1:9097\"){console.error(\"PROXY_DEFAULT_API_URL=\"+v);process.exit(1)}if(!/proxyApiUrl: PROXY_DEFAULT_API_URL/.test(c)){console.error(\"the default setting does not use the constant\");process.exit(1)}for(const f of [\"README.md\",\"README.zh-CN.md\",\"USAGE.md\",\"PERMISSIONS.md\"]){if(!fs.readFileSync(f,\"utf8\").includes(\"127.0.0.1:9097\")){console.error(f+\" does not state 127.0.0.1:9097\");process.exit(1)}}console.log(v)' ",
+      "evidence": "src/shared/constants.ts + https://github.com/alloevil/TabCraft/blob/main/USAGE.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const c=fs.readFileSync(\"src/shared/constants.ts\",\"utf8\");const v=c.match(/PROXY_DEFAULT_API_URL = \\x27([^\\x27]+)\\x27/)[1];if(v!==\"http://127.0.0.1:9097\"){console.error(\"PROXY_DEFAULT_API_URL=\"+v);process.exit(1)}if(!/proxyApiUrl: PROXY_DEFAULT_API_URL/.test(c)){console.error(\"the default setting does not use the constant\");process.exit(1)}for(const f of [\"README.md\",\"README.zh-CN.md\",\"USAGE.md\",\"PERMISSIONS.md\"]){if(!fs.readFileSync(f,\"utf8\").includes(\"127.0.0.1:9097\")){console.error(f+\" does not state 127.0.0.1:9097\");process.exit(1)}}console.log(v)' ",
+        "expect": {
+          "equals": "http://127.0.0.1:9097"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "proxy-only-outbound-destination",
+      "claim": "The only outbound requests are the two the proxy indicator makes to the controller address the user configures: nothing else in src calls fetch, XHR, sendBeacon, WebSocket or EventSource, and no non-loopback URL or analytics/telemetry identifier appears in code.",
+      "value": "2 call sites, both in src/background/proxy-monitor.ts",
+      "metric": "network call sites across src (tests excluded), non-loopback URL literals outside comments, and analytics/telemetry identifiers",
+      "method": "This is the machine-checkable half of the README's `100% Private` row - `All classification runs on-device; the only outbound request is to the proxy-controller address you configure`. Comments are skipped so documentation examples of URLs do not count, and seed-rule entries naming sites like chat.openai.com are data, not clients.",
+      "repro": "node -e 'const fs=require(\"fs\");const walk=d=>fs.readdirSync(d,{recursive:true}).map(String).filter(f=>/\\.(ts|tsx)$/.test(f)&&!f.includes(\"__tests__\")).map(f=>d+\"/\"+f);const files=walk(\"src\");const hits=[],urls=[];for(const f of files){const t=fs.readFileSync(f,\"utf8\");for(const m of t.matchAll(/\\bfetch\\(|new XMLHttpRequest|navigator\\.sendBeacon|new WebSocket|new EventSource/g)){hits.push(f+\":\"+m[0])}for(const line of t.split(\"\\n\")){if(/^\\s*(\\/\\/|\\*|\\/\\*)/.test(line))continue;for(const m of line.matchAll(/https?:\\/\\/([a-zA-Z0-9._-]+)/g)){if(!/^(127\\.0\\.0\\.1|localhost)$/.test(m[1]))urls.push(f+\":\"+m[1])}}}if(urls.length){console.error(\"non-loopback URL literals in code lines: \"+urls.join(\", \"));process.exit(1)}for(const m of \"gtag|posthog|sentry|amplitude|mixpanel|telemetry|google-analytics\".split(\"|\")){if(new RegExp(m,\"i\").test(files.map(f=>fs.readFileSync(f,\"utf8\")).join(\"\\n\"))){console.error(\"analytics reference: \"+m);process.exit(1)}}const sites=[...new Set(hits.map(h=>h.split(\":\")[0]))];if(sites.length!==1||sites[0]!==\"src/background/proxy-monitor.ts\"){console.error(\"network call sites: \"+hits.join(\", \"));process.exit(1)}console.log(hits.length+\" \"+sites[0])' ",
+      "evidence": "src/background/proxy-monitor.ts + https://github.com/alloevil/TabCraft/blob/main/README.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const walk=d=>fs.readdirSync(d,{recursive:true}).map(String).filter(f=>/\\.(ts|tsx)$/.test(f)&&!f.includes(\"__tests__\")).map(f=>d+\"/\"+f);const files=walk(\"src\");const hits=[],urls=[];for(const f of files){const t=fs.readFileSync(f,\"utf8\");for(const m of t.matchAll(/\\bfetch\\(|new XMLHttpRequest|navigator\\.sendBeacon|new WebSocket|new EventSource/g)){hits.push(f+\":\"+m[0])}for(const line of t.split(\"\\n\")){if(/^\\s*(\\/\\/|\\*|\\/\\*)/.test(line))continue;for(const m of line.matchAll(/https?:\\/\\/([a-zA-Z0-9._-]+)/g)){if(!/^(127\\.0\\.0\\.1|localhost)$/.test(m[1]))urls.push(f+\":\"+m[1])}}}if(urls.length){console.error(\"non-loopback URL literals in code lines: \"+urls.join(\", \"));process.exit(1)}for(const m of \"gtag|posthog|sentry|amplitude|mixpanel|telemetry|google-analytics\".split(\"|\")){if(new RegExp(m,\"i\").test(files.map(f=>fs.readFileSync(f,\"utf8\")).join(\"\\n\"))){console.error(\"analytics reference: \"+m);process.exit(1)}}const sites=[...new Set(hits.map(h=>h.split(\":\")[0]))];if(sites.length!==1||sites[0]!==\"src/background/proxy-monitor.ts\"){console.error(\"network call sites: \"+hits.join(\", \"));process.exit(1)}console.log(hits.length+\" \"+sites[0])' ",
+        "expect": {
+          "equals": "2 src/background/proxy-monitor.ts"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "quick-close-old-tabs",
+      "claim": "The Quick panel's old-tab action closes tabs older than 7 days, the cutoff the guide's view table states.",
+      "value": "7 days",
+      "metric": "the days argument at QuickActions.tsx's call site and its button label vs the `7 天前的旧标签页` in USAGE.md's Quick row",
+      "method": "The same handler also takes 30 days further down the file, so the check reads the call site and the visible label rather than the first number it finds. The guide documents only the 7-day action.",
+      "repro": "node -e 'const fs=require(\"fs\");const t=fs.readFileSync(\"src/sidepanel/components/QuickActions.tsx\",\"utf8\");const call=t.match(/await handleCloseOld\\(([0-9]+)\\)/);if(!call){console.error(\"no handleCloseOld( N ) call site\");process.exit(1)}const days=call[1];if(!t.includes(\"Close tabs older than \"+days+\" days\")){console.error(\"the button label does not say \"+days+\" days\");process.exit(1)}if(!new RegExp(days+\"\\\\s*天前\").test(fs.readFileSync(\"USAGE.md\",\"utf8\"))){console.error(\"USAGE does not state \"+days+\" 天前\");process.exit(1)}console.log(days)' ",
+      "evidence": "src/sidepanel/components/QuickActions.tsx + https://github.com/alloevil/TabCraft/blob/main/USAGE.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const t=fs.readFileSync(\"src/sidepanel/components/QuickActions.tsx\",\"utf8\");const call=t.match(/await handleCloseOld\\(([0-9]+)\\)/);if(!call){console.error(\"no handleCloseOld( N ) call site\");process.exit(1)}const days=call[1];if(!t.includes(\"Close tabs older than \"+days+\" days\")){console.error(\"the button label does not say \"+days+\" days\");process.exit(1)}if(!new RegExp(days+\"\\\\s*天前\").test(fs.readFileSync(\"USAGE.md\",\"utf8\"))){console.error(\"USAGE does not state \"+days+\" 天前\");process.exit(1)}console.log(days)' ",
+        "expect": {
+          "equals": "7"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "snooze-manual-restore",
+      "claim": "Snoozing a group persists every tab before closing it and records `wakeAt: 0` - manual restore only. The SNOOZE_PRESETS constant (1 h / 3 h / tomorrow / next Monday) is defined but wired to nothing, so no timed wake exists for a doc to promise; the guide's Snooze row claims only that the tabs are saved locally, which is what the code does.",
+      "value": "wakeAt: 0; 0 references to SNOOZE_PRESETS outside its definition",
+      "metric": "the wakeAt literal written for every snooze record in GroupCard.tsx, the reference count for SNOOZE_PRESETS across src, and the guide's Snooze row",
+      "method": "The audit's own rule is that a doc must not promise more than the code does, and this is the case where it nearly did: constants.ts defines four timed presets while the UI only snoozes until the user restores. The check fails the moment one of those presets is wired up (the doc then has to describe the wake times too).",
+      "repro": "node -e 'const fs=require(\"fs\");const walk=d=>fs.readdirSync(d,{recursive:true}).map(String).filter(f=>/\\.(ts|tsx)$/.test(f)&&!f.includes(\"__tests__\")).map(f=>d+\"/\"+f);const files=walk(\"src\");let refs=0;for(const f of files){if(f.endsWith(\"src/shared/constants.ts\"))continue;refs+=(fs.readFileSync(f,\"utf8\").match(/SNOOZE_PRESETS/g)||[]).length}if(refs){console.error(\"SNOOZE_PRESETS is referenced \"+refs+\" times outside its definition, so a timed wake may be wired\");process.exit(1)}const g=fs.readFileSync(\"src/sidepanel/components/GroupCard.tsx\",\"utf8\");const wake=g.match(/wakeAt: ([0-9]+)/);if(!wake||wake[1]!==\"0\"){console.error(\"snooze wakeAt: \"+(wake?wake[1]:\"absent\"));process.exit(1)}if(!fs.readFileSync(\"USAGE.md\",\"utf8\").includes(\"snoozed\")){console.error(\"USAGE no longer describes the snooze record\");process.exit(1)}console.log(refs+\" \"+wake[1])' ",
+      "evidence": "src/sidepanel/components/GroupCard.tsx + src/shared/constants.ts",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const walk=d=>fs.readdirSync(d,{recursive:true}).map(String).filter(f=>/\\.(ts|tsx)$/.test(f)&&!f.includes(\"__tests__\")).map(f=>d+\"/\"+f);const files=walk(\"src\");let refs=0;for(const f of files){if(f.endsWith(\"src/shared/constants.ts\"))continue;refs+=(fs.readFileSync(f,\"utf8\").match(/SNOOZE_PRESETS/g)||[]).length}if(refs){console.error(\"SNOOZE_PRESETS is referenced \"+refs+\" times outside its definition, so a timed wake may be wired\");process.exit(1)}const g=fs.readFileSync(\"src/sidepanel/components/GroupCard.tsx\",\"utf8\");const wake=g.match(/wakeAt: ([0-9]+)/);if(!wake||wake[1]!==\"0\"){console.error(\"snooze wakeAt: \"+(wake?wake[1]:\"absent\"));process.exit(1)}if(!fs.readFileSync(\"USAGE.md\",\"utf8\").includes(\"snoozed\")){console.error(\"USAGE no longer describes the snooze record\");process.exit(1)}console.log(refs+\" \"+wake[1])' ",
+        "expect": {
+          "equals": "0 0"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "coming-soon-unimplemented",
+      "claim": "Coming Soon lists exactly two things - a multi-AI backend and Firefox support - and neither is implemented: src/background/ai holds only the Gemini Nano and rule-engine modules, and the aiProvider setting accepts only `gemini-nano | rule-engine`.",
+      "value": "2 items; 2 AI providers",
+      "metric": "bullets under `### Coming Soon` in README.md and `### 即将推出` in README.zh-CN.md, the module list of src/background/ai, and the aiProvider union in src/shared/types.ts",
+      "method": "`Tab Snooze` was removed from this list by the audit because it shipped. The check keeps the reverse direction honest too: the day a second backend or a Firefox target lands in the source, the Coming Soon list has to change with it.",
+      "repro": "node -e 'const fs=require(\"fs\");const walk=d=>fs.readdirSync(d,{recursive:true}).map(String).filter(f=>/\\.(ts|tsx)$/.test(f)&&!f.includes(\"__tests__\")).map(f=>d+\"/\"+f);const items=[...fs.readFileSync(\"README.md\",\"utf8\").split(\"### Coming Soon\")[1].split(\"\\n---\")[0].matchAll(/^- (.+)$/gm)].map(m=>m[1].trim());if(items.length!==2){console.error(\"Coming Soon lists \"+items.length+\" items: \"+items.join(\" | \"));process.exit(1)}const zh=[...fs.readFileSync(\"README.zh-CN.md\",\"utf8\").split(\"### 即将推出\")[1].split(\"\\n---\")[0].matchAll(/^- (.+)$/gm)];if(zh.length!==items.length){console.error(\"zh Coming Soon lists \"+zh.length+\" items\");process.exit(1)}const engines=fs.readdirSync(\"src/background/ai\").sort();if(engines.join(\",\")!==\"gemini-nano.ts,rule-engine.ts\"){console.error(\"src/background/ai holds: \"+engines.join(\",\"));process.exit(1)}const providers=(fs.readFileSync(\"src/shared/types.ts\",\"utf8\").match(/aiProvider: ([^;]+);/)||[])[1];const list=[...providers.matchAll(/\\x27([a-z-]+)\\x27/g)].map(m=>m[1]);if(list.join(\",\")!==\"gemini-nano,rule-engine\"){console.error(\"aiProvider accepts: \"+list.join(\",\"));process.exit(1)}console.log(items.length+\" \"+list.join(\"|\"))' ",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/README.md + src/shared/types.ts",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const walk=d=>fs.readdirSync(d,{recursive:true}).map(String).filter(f=>/\\.(ts|tsx)$/.test(f)&&!f.includes(\"__tests__\")).map(f=>d+\"/\"+f);const items=[...fs.readFileSync(\"README.md\",\"utf8\").split(\"### Coming Soon\")[1].split(\"\\n---\")[0].matchAll(/^- (.+)$/gm)].map(m=>m[1].trim());if(items.length!==2){console.error(\"Coming Soon lists \"+items.length+\" items: \"+items.join(\" | \"));process.exit(1)}const zh=[...fs.readFileSync(\"README.zh-CN.md\",\"utf8\").split(\"### 即将推出\")[1].split(\"\\n---\")[0].matchAll(/^- (.+)$/gm)];if(zh.length!==items.length){console.error(\"zh Coming Soon lists \"+zh.length+\" items\");process.exit(1)}const engines=fs.readdirSync(\"src/background/ai\").sort();if(engines.join(\",\")!==\"gemini-nano.ts,rule-engine.ts\"){console.error(\"src/background/ai holds: \"+engines.join(\",\"));process.exit(1)}const providers=(fs.readFileSync(\"src/shared/types.ts\",\"utf8\").match(/aiProvider: ([^;]+);/)||[])[1];const list=[...providers.matchAll(/\\x27([a-z-]+)\\x27/g)].map(m=>m[1]);if(list.join(\",\")!==\"gemini-nano,rule-engine\"){console.error(\"aiProvider accepts: \"+list.join(\",\"));process.exit(1)}console.log(items.length+\" \"+list.join(\"|\"))' ",
+        "expect": {
+          "equals": "2 gemini-nano|rule-engine"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "contributing-gates-in-ci",
+      "claim": "The five gates CONTRIBUTING.md tells a contributor to run - typecheck, lint, format:check, test, build - are all run by CI.",
+      "value": "5 of 5",
+      "metric": "the `npm ...` commands named by CONTRIBUTING.md's 'Run the same gates CI runs' sentence vs the run steps of .github/workflows/ci.yml",
+      "method": "The contributing guide's promise is that a local green run means a green PR. CI also runs steps the guide does not name (coverage instead of a plain test run, then verify:build, then the browser smoke job), which is why the check only requires that nothing the guide names is missing from the workflow.",
+      "repro": "node -e 'const fs=require(\"fs\");const line=(fs.readFileSync(\"CONTRIBUTING.md\",\"utf8\").match(/Run the same gates[^\\n]*/)||[])[0];if(!line){console.error(\"CONTRIBUTING.md no longer names the gate list\");process.exit(1)}const gates=[...line.matchAll(/`npm (?:run )?([a-z0-9:]+)`/g)].map(m=>m[1]);const ci=fs.readFileSync(\".github/workflows/ci.yml\",\"utf8\");const missing=gates.filter(g=>!new RegExp(\"npm (?:run )?\"+g+\"\\\\b\").test(ci));if(missing.length){console.error(\"named by CONTRIBUTING but not run in CI: \"+missing.join(\", \"));process.exit(1)}console.log(gates.length+\" \"+gates.length)' ",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/CONTRIBUTING.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const line=(fs.readFileSync(\"CONTRIBUTING.md\",\"utf8\").match(/Run the same gates[^\\n]*/)||[])[0];if(!line){console.error(\"CONTRIBUTING.md no longer names the gate list\");process.exit(1)}const gates=[...line.matchAll(/`npm (?:run )?([a-z0-9:]+)`/g)].map(m=>m[1]);const ci=fs.readFileSync(\".github/workflows/ci.yml\",\"utf8\");const missing=gates.filter(g=>!new RegExp(\"npm (?:run )?\"+g+\"\\\\b\").test(ci));if(missing.length){console.error(\"named by CONTRIBUTING but not run in CI: \"+missing.join(\", \"));process.exit(1)}console.log(gates.length+\" \"+gates.length)' ",
+        "expect": {
+          "equals": "5 5"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "coverage-thresholds-enforced",
+      "claim": "Coverage thresholds are enforced and not decorative: vitest.config.ts declares eight threshold entries in two tiers - a global bar plus a stricter src/shared bar - and CI runs the coverage script that reads them.",
+      "value": "8 threshold entries in 2 tiers",
+      "metric": "statements/lines/functions/branches entries in vitest.config.ts, the two-tier block, and the `npm run test:coverage` step in .github/workflows/ci.yml",
+      "method": "The changelog publishes that CI now enforces coverage thresholds. A thresholds block nothing runs is a comment, so the check requires both the block and the CI step; the shared tier exists because that is where the classification and duplicate logic - the parts whose regressions change behaviour - is unit-testable.",
+      "repro": "node -e 'const fs=require(\"fs\");const v=fs.readFileSync(\"vitest.config.ts\",\"utf8\");const n=(v.match(/^\\s+(?:statements|lines|functions|branches): [0-9]+/gm)||[]).length;if(n!==8){console.error(\"threshold entries: \"+n);process.exit(1)}const tiers=(v.match(/thresholds: \\{/g)||[]).length;if(tiers!==1||!/\\x27src\\/shared\\/\\*\\*\\/\\*\\.ts\\x27: \\{/.test(v)){console.error(\"the two-tier threshold block is gone\");process.exit(1)}if(!/npm run test:coverage/.test(fs.readFileSync(\".github/workflows/ci.yml\",\"utf8\"))){console.error(\"CI does not run the coverage gate\");process.exit(1)}console.log(n+\" thresholds\")' ",
+      "evidence": "vitest.config.ts + https://github.com/alloevil/TabCraft/blob/main/.github/workflows/ci.yml",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const v=fs.readFileSync(\"vitest.config.ts\",\"utf8\");const n=(v.match(/^\\s+(?:statements|lines|functions|branches): [0-9]+/gm)||[]).length;if(n!==8){console.error(\"threshold entries: \"+n);process.exit(1)}const tiers=(v.match(/thresholds: \\{/g)||[]).length;if(tiers!==1||!/\\x27src\\/shared\\/\\*\\*\\/\\*\\.ts\\x27: \\{/.test(v)){console.error(\"the two-tier threshold block is gone\");process.exit(1)}if(!/npm run test:coverage/.test(fs.readFileSync(\".github/workflows/ci.yml\",\"utf8\"))){console.error(\"CI does not run the coverage gate\");process.exit(1)}console.log(n+\" thresholds\")' ",
+        "expect": {
+          "equals": "8 thresholds"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "verify-build-gate",
+      "claim": "The gate that catches unbundled dependencies exists and runs in both workflows, CI and release, so a release cannot ship bundles whose dependencies were left unresolved.",
+      "value": "2 workflows (ci.yml, release.yml)",
+      "metric": "package.json's verify:build script, the presence of scripts/verify-build.mjs, and the two workflows that invoke it",
+      "method": "This is the fix for the regression the changelog describes: engines.browsers was missing, Parcel built the extension as a Node bundle, `plasmo build` exited 0 and both the side panel and the service worker died with `Cannot find module 'react/jsx-runtime'`. `plasmo build` exiting 0 still does not mean the output can run, so the gate has to be invoked from every workflow that ships or validates a build.",
+      "repro": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");if(!fs.existsSync(\"scripts/verify-build.mjs\")){console.error(\"scripts/verify-build.mjs is gone\");process.exit(1)}if(!/verify-build/.test(p.scripts[\"verify:build\"])){console.error(\"package.json verify:build does not call the script\");process.exit(1)}const jobs=[\"ci.yml\",\"release.yml\"].filter(f=>fs.readFileSync(\".github/workflows/\"+f,\"utf8\").includes(\"verify:build\"));if(jobs.length!==2){console.error(\"verify:build runs in: \"+jobs.join(\", \"));process.exit(1)}console.log(jobs.length+\" \"+jobs.join(\",\"))' ",
+      "evidence": "scripts/verify-build.mjs + https://github.com/alloevil/TabCraft/blob/main/.github/workflows/ci.yml",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");if(!fs.existsSync(\"scripts/verify-build.mjs\")){console.error(\"scripts/verify-build.mjs is gone\");process.exit(1)}if(!/verify-build/.test(p.scripts[\"verify:build\"])){console.error(\"package.json verify:build does not call the script\");process.exit(1)}const jobs=[\"ci.yml\",\"release.yml\"].filter(f=>fs.readFileSync(\".github/workflows/\"+f,\"utf8\").includes(\"verify:build\"));if(jobs.length!==2){console.error(\"verify:build runs in: \"+jobs.join(\", \"));process.exit(1)}console.log(jobs.length+\" \"+jobs.join(\",\"))' ",
+        "expect": {
+          "equals": "2 ci.yml,release.yml"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "rules-view-custom-only",
+      "claim": "The Rules view edits custom rules only - it never reads the 390 built-ins - while the whole-database backup lives in Settings' export/import, exactly as README.md and USAGE.md describe.",
+      "value": "custom rules in the panel; 2 backup handlers in Settings",
+      "metric": "seed-rules references in RulesView.tsx, its chrome.storage.local use, and the handleExport/handleImport functions in SettingsView.tsx vs the two doc sentences",
+      "method": "The audit rewrote the Rules row of the feature table: it used to read as if the built-ins were editable there, and the backup used to be advertised as a Rules-view feature. The check ties both halves of that correction to the components that implement them.",
+      "repro": "node -e 'const fs=require(\"fs\");const rv=fs.readFileSync(\"src/sidepanel/components/RulesView.tsx\",\"utf8\");if(/seed-rules/.test(rv)){console.error(\"RulesView reads the built-in seed rules\");process.exit(1)}if(!/chrome\\.storage\\.local/.test(rv)){console.error(\"RulesView does not edit the stored custom rules\");process.exit(1)}const sv=fs.readFileSync(\"src/sidepanel/components/SettingsView.tsx\",\"utf8\");const handlers=[\"handleExport\",\"handleImport\"].filter(h=>sv.includes(\"function \"+h));if(handlers.length!==2){console.error(\"Settings backup handlers found: \"+handlers.join(\",\"));process.exit(1)}if(!fs.readFileSync(\"README.md\",\"utf8\").includes(\"data export/import\")){console.error(\"README no longer says the backup lives in Settings\");process.exit(1)}if(!fs.readFileSync(\"USAGE.md\",\"utf8\").includes(\"内置规则不在此列\")){console.error(\"USAGE no longer says the built-ins are not listed in the Rules view\");process.exit(1)}console.log(handlers.length)' ",
+      "evidence": "src/sidepanel/components/RulesView.tsx + https://github.com/alloevil/TabCraft/blob/main/README.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\");const rv=fs.readFileSync(\"src/sidepanel/components/RulesView.tsx\",\"utf8\");if(/seed-rules/.test(rv)){console.error(\"RulesView reads the built-in seed rules\");process.exit(1)}if(!/chrome\\.storage\\.local/.test(rv)){console.error(\"RulesView does not edit the stored custom rules\");process.exit(1)}const sv=fs.readFileSync(\"src/sidepanel/components/SettingsView.tsx\",\"utf8\");const handlers=[\"handleExport\",\"handleImport\"].filter(h=>sv.includes(\"function \"+h));if(handlers.length!==2){console.error(\"Settings backup handlers found: \"+handlers.join(\",\"));process.exit(1)}if(!fs.readFileSync(\"README.md\",\"utf8\").includes(\"data export/import\")){console.error(\"README no longer says the backup lives in Settings\");process.exit(1)}if(!fs.readFileSync(\"USAGE.md\",\"utf8\").includes(\"内置规则不在此列\")){console.error(\"USAGE no longer says the built-ins are not listed in the Rules view\");process.exit(1)}console.log(handlers.length)' ",
+        "expect": {
+          "equals": "2"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "license-mit",
+      "claim": "TabCraft is MIT-licensed: package.json, the LICENSE text and the README badge agree.",
+      "value": "MIT",
+      "metric": "the license field in package.json, the LICENSE file's title line, and the `badge/license-MIT` URL in README.md",
+      "method": "A license that disagrees between the manifest, the file and the badge is what a store reviewer or a downstream reuser trips over first; all three are one-line checks.",
+      "repro": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");if(p.license!==\"MIT\"||!/MIT License/.test(fs.readFileSync(\"LICENSE\",\"utf8\"))){console.error(\"package.json license=\"+p.license);process.exit(1)}if(!/badge\\/license-MIT/.test(fs.readFileSync(\"README.md\",\"utf8\"))){console.error(\"the README license badge is not MIT\");process.exit(1)}console.log(p.license)' ",
+      "evidence": "LICENSE + package.json",
+      "as_of": "2026-09-13",
+      "check": {
+        "cmd": "node -e 'const fs=require(\"fs\"),p=require(\"./package.json\");if(p.license!==\"MIT\"||!/MIT License/.test(fs.readFileSync(\"LICENSE\",\"utf8\"))){console.error(\"package.json license=\"+p.license);process.exit(1)}if(!/badge\\/license-MIT/.test(fs.readFileSync(\"README.md\",\"utf8\"))){console.error(\"the README license badge is not MIT\");process.exit(1)}console.log(p.license)' ",
+        "expect": {
+          "equals": "MIT"
+        },
+        "timeout": 60
+      }
+    },
+    {
+      "id": "smart-grouping-cascade-order",
+      "claim": "Smart grouping classifies through a five-step cascade - learned mapping, domain rule, multi-purpose domain override, URL-path/title keywords, on-device AI - where the AI is consulted only when the rule engine's own guess was weak, and a low-confidence AI verdict agreeing with that guess counts as corroboration.",
+      "value": "5 steps (AI last, gated)",
+      "metric": "the order of the classification tiers and the condition under which the AI call is made",
+      "method": "The tiers themselves live in src/background/ai/rule-engine.ts and src/background/ai/gemini-nano.ts, but the ordering, the multi-purpose override and the `only when unsure` gate are wired in the service worker around them, where classification calls chrome.tabs/chrome.storage and the Prompt API. The unit tests cover the pure pieces (rule matching, duplicate grouping, formatting) - not the cascade.",
+      "repro": "npm ci && npm run build && npm run smoke   # then load build/chrome-mv3-prod/ and press Smart Group",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/README.md (Classification pipeline)",
+      "as_of": "2026-09-13",
+      "check": {
+        "manual": "Running the extension is the only receipt: `npm run smoke` (scripts/smoke-extension.mjs) loads the built extension into a real Chrome and proves it installs, renders its views and answers a message, but it does not exercise grouping, so the cascade order is verified by hand in a browser. Either way the claims job cannot run it: the smoke script needs `npm ci` for puppeteer-core and, on GitHub's runners, a Chrome for Testing download, i.e. a network install, and the check has to stay offline."
+      }
+    },
+    {
+      "id": "hibernation-memory-is-an-estimate",
+      "claim": "The per-tab memory figure the Dashboard shows is a rough display estimate rather than a measurement, as both READMEs now say.",
+      "value": "display estimate, not a measurement",
+      "metric": "whether any code path measures memory, as opposed to multiplying a constant",
+      "method": "The number itself is machine-checked by memory-per-tab-estimate (a flat 50 MB constant times the hibernated count). The half a command cannot settle is the negative - that no measurement exists behind it - because Chrome exposes no per-tab memory API to an extension, and confirming what the Dashboard actually displays means looking at the running panel.",
+      "repro": "npm ci && npm run build   # load build/chrome-mv3-prod/, then open the Stats view",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/README.md (Tab Hibernation row)",
+      "as_of": "2026-09-13",
+      "check": {
+        "manual": "Needs the extension running: the Dashboard is a React view that reads stats from chrome.storage, so the receipt is loading the side panel in Chrome (an unpacked load, or `npm run smoke` to prove the panel mounts). The claims job has no browser - the e2e script requires npm dependencies and a downloaded Chrome for Testing, and Chrome's own memory API is not available to extensions in the first place, so no committed artifact records the figure as measured."
+      }
+    },
+    {
+      "id": "proxy-indicator-live-route",
+      "claim": "With the indicator switched on, the badge on each page names the proxy node that page's traffic egressed through, read from the Clash/mihomo controller at the address the user configured.",
+      "value": "live controller answers; badge names the egress node",
+      "metric": "the node name the badge renders for a host, matched against the controller's connection table",
+      "method": "src/background/proxy-monitor.ts is the only network caller (machine-checked by proxy-only-outbound-destination) and src/shared/proxy.ts does the route matching, but whether a given page's traffic actually egressed through the node the badge claims depends on a running controller and that page's connections.",
+      "repro": "curl -s http://127.0.0.1:9097/version   # with Clash/mihomo listening, then enable Show proxy on every page",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/USAGE.md (proxy indicator setup)",
+      "as_of": "2026-09-13",
+      "check": {
+        "manual": "Requires a live Clash/mihomo controller with a TCP external-controller, a real browsing session and the optional <all_urls> grant - a local service plus network traffic, neither of which exists in a CI runner. The setup guide is written for exactly that manual check (curl the controller, then read the pill on a page)."
+      }
+    },
+    {
+      "id": "undo-restores-pre-group-layout",
+      "claim": "Undo restores the tab layout as it was before the last Smart Group run.",
+      "value": "layout restored from the snapshot",
+      "metric": "tabs and their group membership after pressing undo vs before Smart Group",
+      "method": "The snapshot is taken immediately before grouping and restored through chrome.tabs/chrome.tabGroups, so both halves need a live window with real tabs. The depth of the snapshot ring is machine-checked (undo-history-depth); its effect is not.",
+      "repro": "npm ci && npm run build   # load the unpacked build, group, then press the undo button",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/USAGE.md (section 8, item 5)",
+      "as_of": "2026-09-13",
+      "check": {
+        "manual": "A browser session with real tabs is the only receipt, and the smoke gate does not perform one (it loads the panel and asks the service worker a question - it never groups or ungroups tabs). Reproducing it inside the claims job would mean installing npm dependencies, downloading a Chrome for Testing build and driving a browser, which the check cannot do offline in under a minute."
+      }
+    },
+    {
+      "id": "hibernation-restores-on-click",
+      "claim": "Hibernating a tab frees its memory without losing it: clicking the tab reloads the page.",
+      "value": "tab discarded, not closed; click reloads",
+      "metric": "the tab's discarded state and the URL it returns to after a click",
+      "method": "Hibernation calls chrome.tabs.discard on a live tab and the FAQ promises the page comes back when clicked; neither the discard nor the reload exists outside a browser.",
+      "repro": "npm ci && npm run build   # load the unpacked build, hibernate a tab, click it",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/USAGE.md (FAQ: 休眠的标签页数据会丢吗)",
+      "as_of": "2026-09-13",
+      "check": {
+        "manual": "Needs a real Chrome with the extension loaded and a tab left idle past the timeout (or the action triggered by hand), then a click to observe the reload. The claims job is offline and headless-without-the-extension, and the smoke gate deliberately stops at 'the panel mounts and the worker answers'."
+      }
+    },
+    {
+      "id": "dedup-keeps-one-per-group",
+      "claim": "Duplicate detection keeps one tab per duplicate group and closes the rest, after matching URLs with tracking parameters stripped.",
+      "value": "one kept per group",
+      "metric": "which tab of each duplicate group survives a close-duplicates run",
+      "method": "The pure selection logic is unit-tested (src/__tests__/duplicate.test.ts), and the tracking-parameter list is machine-checked (dedup-tracking-params), but the keeping-and-closing itself is chrome.tabs.remove over a live window - the tests assert the group's shape, not that the right tabs disappeared.",
+      "repro": "npm ci && npm run build   # load the unpacked build, open two copies of one URL, close duplicates",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/USAGE.md (Dedup view)",
+      "as_of": "2026-09-13",
+      "check": {
+        "manual": "The receipt is a browser session: open duplicates, run Close Duplicates, check which tabs remain. It also needs the confirmation dialog and, for the auto-close setting, a browsing session - none of which the claims job can host offline, and the smoke gate does not open duplicate tabs."
+      }
+    },
+    {
+      "id": "gemini-nano-device-requirements",
+      "claim": "On-device AI needs Chrome 138+ and the device floors Chrome publishes: about 22 GB free on the profile volume, GPU memory strictly over 4 GB (or 16 GB RAM and 4 cores on the CPU path), and a 1-2 GB model download; Android, iOS and non-Plus ChromeOS are unsupported.",
+      "value": "22 GB free; >4 GB VRAM; 1-2 GB model",
+      "metric": "the requirement table in the AI section of the guide",
+      "method": "These are Chrome's own on-device AI requirements quoted into USAGE.md, not figures this repository produces: no committed artifact can recompute them, and they change with Chrome releases rather than with this code.",
+      "repro": "chrome://on-device-internals   # on Chrome 138+, against Chrome's on-device AI requirements page",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/USAGE.md (section 7 requirements table)",
+      "as_of": "2026-09-13",
+      "check": {
+        "manual": "The primary source is Chrome's documentation and the browser's own behaviour (chrome://on-device-internals reports the model download), and the figures are device-dependent. Verifying them needs a Chrome build with the Prompt API provisioned - a model download over the network, which rule 4 puts out of bounds for a check."
+      }
+    },
+    {
+      "id": "chrome151-blocks-unpacked",
+      "claim": "Some recent Chrome builds refuse unpacked installs: on one machine Chrome 151 ignored `--load-extension`, reported success from the DevTools Extensions.loadUnpacked call, and left chrome://extensions empty with developer mode already on - which is why the project is preparing a store listing.",
+      "value": "Chrome 151 observed refusing the load",
+      "metric": "the store doc's account of the failed load, and the reason the submission kit exists",
+      "method": "This is an observation about one Chrome build on one machine, recorded in docs/chrome-web-store.md. It is a claim about the browser, not about this repository, so it can only be re-observed.",
+      "repro": "google-chrome --load-extension=build/chrome-mv3-prod   # Chrome 151, then open chrome://extensions",
+      "evidence": "https://github.com/alloevil/TabCraft/blob/main/docs/chrome-web-store.md",
+      "as_of": "2026-09-13",
+      "check": {
+        "manual": "Reproducing it needs that Chrome build, developer mode, and a manual or scripted unpacked load - and the result is a negative (nothing registered) which a CI runner cannot distinguish from its own misconfiguration. The ci.yml smoke job records the related, reproducible half: it installs Chrome for Testing because the preinstalled Chrome refuses the load."
+      }
+    }
+  ]
+}

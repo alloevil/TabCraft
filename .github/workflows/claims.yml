@@ -1,0 +1,28 @@
+name: claims
+
+# Runs the receipts behind claims.json: every number this project publishes in prose — the
+# version badge, the hero footer, the 390 built-in rules, the storage and permission claims,
+# the caps and timeouts the guides quote — must still be printed by the command next to it.
+# A weekly run as well as on push, because a published figure can go stale without anyone
+# committing anything (the version badge already did once: it read 0.1.3 in eight releases).
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '17 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: published numbers still reproduce
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to commit SHAs — see the note in ci.yml. Dependabot's
+      # github-actions ecosystem proposes the bumps for both lines.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # No install step: the checks read committed files (package.json, the lockfile, the seed
+      # rules, src/) with node, so `npm ci` would only add minutes. The action brings its own
+      # Python, and the tool is run from its own checkout rather than installed from a registry.
+      - uses: alloevil/verify-claims@72a0fe704f1cf4c8ffa28dfd0c22622ddbadc21d # v0.1.1
